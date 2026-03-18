@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(SDL3 REQUIRED)
+# find_package(OpenGl REQUIRED)
 
 add_executable(Voxel
 	src/main.cpp
@@ -18,11 +19,15 @@ add_executable(Voxel
 	src/render/shader.h
 	src/render/renderer.h
 	src/render/renderer.cpp
+	src/render/camera.h
+	src/render/camera.cpp
 
 	lib/glad/src/glad.c
 )
 
 target_include_directories(Voxel PRIVATE
+	src
+	lib
 	lib/glad/include
 )
 

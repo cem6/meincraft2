@@ -3,6 +3,7 @@
 
 #include "../util/util.h"
 #include "shader.h"
+#include "camera.h"
 
 void renderer_init();
 void renderer_frame();

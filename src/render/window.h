@@ -3,6 +3,7 @@
 
 #include "../util/util.h"
 #include "renderer.h"
+#include "camera.h"
 
 void window_create();
 void window_loop();
