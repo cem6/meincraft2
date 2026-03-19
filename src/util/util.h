@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <vector>
 
 #include "defines.h"
 

@@ -26,6 +26,8 @@ add_executable(Voxel
 
 	src/world/chunk.h
 	src/world/chunk.cpp
+	src/world/world.h
+	src/world/world.cpp
 
 	lib/glad/src/glad.c
 )

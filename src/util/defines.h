@@ -6,7 +6,7 @@
 constexpr int FRAME_DELAY = (1000 / TARGET_FPS);
 
 // camera
-constexpr float MOVESPEED = 0.02f;
+constexpr float MOVESPEED = 20.0f;
 constexpr float SENSITIVITY = 0.1f;
 
 // chunk
