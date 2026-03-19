@@ -5,7 +5,6 @@
 #include "chunk.h"
 
 struct World {
-	std::vector<Chunk*> chunks;
 	std::unordered_map<glm::ivec3, Chunk*, PosHasher> chunkMap;
 };
 extern World world;
@@ -13,5 +12,6 @@ extern World world;
 void world_init();
 void world_destroy();
 blocktype world_get_block(glm::ivec3);
+void world_update_chunks(glm::vec3 cameraPos);
 
 #endif

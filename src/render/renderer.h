@@ -10,7 +10,7 @@
 #include "../world/world.h"
 
 void renderer_init();
-void renderer_frame();
+void renderer_draw_frame();
 void renderer_destroy();
 
 #endif

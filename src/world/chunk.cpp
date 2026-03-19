@@ -29,6 +29,7 @@ bool _block_is_transparent(Chunk *chunk, int x, int y, int z) {
 glm::vec2 _get_atlas_coords(blocktype type) {
 	if (type == STONE) return glm::vec2(0, 15);
 	if (type == DIRT) return glm::vec2(1, 15);
+	if (type == GRASS) return glm::vec2(3, 15);
 	return glm::vec2(15, 0);
 }
 
@@ -54,7 +55,7 @@ void _add_face(std::vector<float> &vertices, int x, int y, int z, blocktype bloc
 void chunk_generate_mesh(Chunk *chunk) {
 	// static -> reuse for all chunks
 	static std::vector<float> vertices; 
-	if (vertices.capacity() == 0) vertices.reserve(CHUNK_VOLUME * 12);
+	if (vertices.capacity() == 0) vertices.reserve(CHUNK_VOLUME * 6);
 	vertices.clear();
 
 	for (int x = 0; x < CHUNK_SIZE_X; x++) {

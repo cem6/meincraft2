@@ -20,7 +20,6 @@ void window_create() {
 	window = SDL_CreateWindow("Voxel", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);
 
-	// SDL_SetWindowMouseGrab(window, true);
 	SDL_SetWindowRelativeMouseMode(window, true);
 
 	// init glad
@@ -31,7 +30,7 @@ void window_create() {
 
 	renderer_init();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_MULTISAMPLE);
+	// glEnable(GL_MULTISAMPLE);
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
@@ -47,6 +46,7 @@ void window_loop() {
 	Uint64 frameStart;
 	Uint64 lastFrameTime = SDL_GetTicks();
 	int frameTime;
+	int frameCount = 0;
 
 	bool running = true;
 	SDL_Event event;
@@ -75,14 +75,20 @@ void window_loop() {
 		camera_update_position(deltaTime);
 
 		// render
-		glClearColor(0.1f, 0.1f, 0.1f, 1);
+		glClearColor(0.2f, 0.5f, 0.9f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		renderer_frame();
+		renderer_draw_frame();
+		if (frameCount == 60) {
+			frameCount = 0;
+			world_update_chunks(camera.pos);
+		}
 		SDL_GL_SwapWindow(window);
 
 		// wait if finished early
 		frameTime = SDL_GetTicks() - frameStart;
 		if (FRAME_DELAY > frameTime) SDL_Delay(FRAME_DELAY - frameTime);
+
+		frameCount++;
 	}
 
 	_destroy();

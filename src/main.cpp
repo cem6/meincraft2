@@ -1,4 +1,3 @@
-#include "util/util.h"
 #include "render/window.h"
 
 int main() {

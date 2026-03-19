@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-GLuint VAO, VBO, shaderProgram;
+GLuint shaderProgram;
 GLint modelLoc, viewLoc, projLoc, texLoc;
 
 void renderer_init() {
@@ -19,6 +19,7 @@ void renderer_init() {
 void _draw_chunk(Chunk *chunk) {
 	if (chunk->vertexCount == 0) return;
 
+	// chunk pos zu global pos
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(
 		chunk->pos.x * CHUNK_SIZE_X,
 		chunk->pos.y * CHUNK_SIZE_Y,
@@ -30,7 +31,26 @@ void _draw_chunk(Chunk *chunk) {
 	glDrawArrays(GL_TRIANGLES, 0, chunk->vertexCount);
 }
 
-void renderer_frame() {
+void _draw_radius(glm::vec3 cameraPos) {
+	// camera pos -> chunk pos
+	int camX = floor(cameraPos.x / CHUNK_SIZE_X);
+	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
+	int camZ = floor(cameraPos.z / CHUNK_SIZE_Z);
+
+	for (int x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
+		for (int y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
+			for (int z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+				glm::ivec3 pos(camX + x, camY + y, camZ + z);
+				// float distSq = (x*x) + (y*y) + (z*z);
+				// if (distSq > RENDER_DISTANCE*RENDER_DISTANCE) continue;
+				if (world.chunkMap.count(pos)) _draw_chunk(world.chunkMap[pos]);
+			}
+		}
+	}
+	//
+}
+
+void renderer_draw_frame() {
 	glUseProgram(shaderProgram);
 
 	// texture
@@ -44,8 +64,8 @@ void renderer_frame() {
  	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-	// for (Chunk *c : world.chunks) _draw_chunk(c);
-	for (auto [_, c] : world.chunkMap) _draw_chunk(c);
+	// for (auto &[_, c] : world.chunkMap) _draw_chunk(c);
+	_draw_radius(camera.pos);
 }
 
 void renderer_destroy() {

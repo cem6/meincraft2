@@ -7,6 +7,7 @@ enum blocktype {
 	AIR,
 	STONE,
 	DIRT,
+	GRASS,
 };
 
 enum face {
@@ -23,6 +24,9 @@ struct Chunk {
 	GLuint vao, vbo;
 	int vertexCount;
 	glm::ivec3 pos;
+
+	// for world_update_chunk
+	bool needMeshUpdate = false;
 };
 
 struct PosHasher {

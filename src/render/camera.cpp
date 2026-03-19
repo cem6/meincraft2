@@ -23,6 +23,8 @@ void camera_update_position(float deltaTime) {
 	float speed = MOVESPEED * deltaTime;
 	const bool *state = SDL_GetKeyboardState(NULL);
 
+	if (state[SDL_SCANCODE_LSHIFT]) speed *= 5;
+
 	if (state[SDL_SCANCODE_W]) camera.pos += speed * camera.front;
 	if (state[SDL_SCANCODE_S]) camera.pos -= speed * camera.front;
 	if (state[SDL_SCANCODE_A]) camera.pos -= glm::normalize(glm::cross(camera.front, camera.up)) * speed;
