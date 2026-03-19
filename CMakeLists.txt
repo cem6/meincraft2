@@ -21,6 +21,8 @@ add_executable(Voxel
 	src/render/renderer.cpp
 	src/render/camera.h
 	src/render/camera.cpp
+	src/render/texture.h
+	src/render/texture.cpp
 
 	lib/glad/src/glad.c
 )

@@ -4,3 +4,4 @@ keybinds
 
 TODO
 	redo renderer
+	texture RGBA
