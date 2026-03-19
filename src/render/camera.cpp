@@ -9,6 +9,7 @@ void camera_update_rotation(float xoffset, float yoffset) {
 	// constrain -> cant flip
 	if (camera.pitch > 89.0f) camera.pitch = 89.0f;
 	if (camera.pitch < -89.0f) camera.pitch = -89.0f;
+	// std::cout << "yaw: " << camera.yaw << "\npitch: " << camera.pitch << std::endl;
 
 	glm::vec3 dir;
 	dir.x = cos(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));

@@ -24,6 +24,9 @@ add_executable(Voxel
 	src/render/texture.h
 	src/render/texture.cpp
 
+	src/world/chunk.h
+	src/world/chunk.cpp
+
 	lib/glad/src/glad.c
 )
 

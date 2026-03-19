@@ -17,8 +17,6 @@ void window_create() {
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-
-
 	window = SDL_CreateWindow("Voxel", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);
 
@@ -63,9 +61,10 @@ void window_loop() {
 			if (event.type == SDL_EVENT_QUIT) running = false;
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				if (event.key.key == SDLK_ESCAPE) running = false;
-				if (event.key.key == SDLK_B) {
-					SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window)); // toggle capture mouse
-				}
+				// toggle capture mouse
+				if (event.key.key == SDLK_B) SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window)); 
+				// set lines
+				if (event.key.key == SDLK_E) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			}
 			// only move camera when mouse captured
 			if (event.type == SDL_EVENT_MOUSE_MOTION && SDL_GetWindowRelativeMouseMode(window)) {
@@ -74,8 +73,6 @@ void window_loop() {
 		}
 
 		camera_update_position(deltaTime);
-
-		// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 		// render
 		glClearColor(0.1f, 0.1f, 0.1f, 1);
