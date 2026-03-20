@@ -1,12 +1,13 @@
 #include "world.h"
-#include "noise/FastNoiseLite.h"
 
-#define TEST_SIZE 8
+#include "noise/FastNoiseLite.h"
+#include "../util/debug.h"
 
 World world;
 FastNoiseLite noise;
 
-void _generate_blockdata(glm::ivec3 pos) {
+// TODO: move to chunk.
+Chunk* _generate_blockdata(glm::ivec3 pos) {
 	Chunk *c = new Chunk();
 	chunk_init(c, pos);
 
@@ -17,7 +18,7 @@ void _generate_blockdata(glm::ivec3 pos) {
 	for (int x = 0; x < CHUNK_SIZE_X; x++) {
 		for (int z = 0; z < CHUNK_SIZE_Z; z++) {
 			// int height = (int)(sin((xOffset + x) * 0.1f) * 3.0f + cos((zOffset + z) * 0.1f) * 3.0f) + 16;
-			int height = (noise.GetNoise(float(xOffset + x), float(zOffset + z)) + 1) * 32 + 8;
+			int height = (noise.GetNoise(float(xOffset + x), float(zOffset + z)) + 1) * 16 + 16;
 
 			for (int y = 0; y < CHUNK_SIZE_Y; y++) {
 				int gy = yOffset + y;
@@ -31,15 +32,14 @@ void _generate_blockdata(glm::ivec3 pos) {
 		}
 	}
 
-	world.chunkMap[c->pos] = c;
+	return world.chunkMap[c->pos] = c;
 }
 
 void _generate_initial_world() {
-
 	// create all block data
-	for (int cy = 0; cy < WORLD_HEIGHT_CHUNKS; cy++) {
-		for (int cx = -TEST_SIZE/2; cx < TEST_SIZE/2; cx++) {
-			for (int cz = -TEST_SIZE/2; cz < TEST_SIZE/2; cz++) {
+	for (int cy = 0; cy < RENDER_DISTANCE/2; cy++) {
+		for (int cx = -RENDER_DISTANCE; cx < RENDER_DISTANCE; cx++) {
+			for (int cz = -RENDER_DISTANCE; cz < RENDER_DISTANCE; cz++) {
 				Chunk *c = new Chunk();
 				chunk_init(c, glm::ivec3(cx, cy, cz));
 				_generate_blockdata(glm::ivec3(cx, cy, cz));
@@ -57,12 +57,13 @@ void world_init() {
 }
 
 void world_destroy() {
-	for (auto [_, c] : world.chunkMap) {
+	for (auto &[_, c] : world.chunkMap) {
 		glDeleteVertexArrays(1, &c->vao);	
 		glDeleteBuffers(1, &c->vbo);
 		delete c;
 	}
 	world.chunkMap.clear();
+	world.dirtyChunks.clear();
 }
 
 blocktype world_get_block(glm::ivec3 globalPos) {
@@ -99,29 +100,61 @@ void world_update_chunks(glm::vec3 cameraPos) {
 	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
 	int camZ = floor(cameraPos.z / CHUNK_SIZE_Z);
 
+	// per frame
+	int blockdata_generated = 0;
+
 	// check: all blockdata in radius exists
 	for (int x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
-		for (int y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
-			for (int z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+		for (int z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+
+			int height = (noise.GetNoise(float(camX * CHUNK_SIZE_X + x), float(camZ * CHUNK_SIZE_Z + z)) + 1) * 16 + 16;
+
+			for (int y = RENDER_DISTANCE; y >= -RENDER_DISTANCE; y--) { // falschrum -> oben zuerst
+				if (blockdata_generated >= MAX_GENERATIONS_PER_FRAME) break;
+
+				// dont generate sky chunks
+				if ((camY + y - 1) * CHUNK_SIZE_Y > height) continue;
+				// dont generate zu weit unten
+				if ((camY + y) * CHUNK_SIZE_Y < -CHUNK_SIZE_Y * 3) continue;
+
 				glm::ivec3 pos(camX + x, camY + y, camZ + z);
 				if (!world.chunkMap.count(pos)) { 
-					_generate_blockdata(pos);
-					// mark neighbors need mesh update
+					Chunk *c = _generate_blockdata(pos);
+
+					// int neiSolidCnt = 0;
 					for (int i = 0; i < 6; i++) {
 						glm::ivec3 neiPos = pos + neighbors[i];
-						if (world.chunkMap.count(neiPos)) world.chunkMap[neiPos]->needMeshUpdate = true;
+						// mark neighbors need mesh update
+						if (world.chunkMap.count(neiPos)) {
+							world.dirtyChunks.push_back(world.chunkMap[neiPos]);
+							// if (world.chunkMap[neiPos]->solid) neiSolidCnt++;
+						}
 					}
 
+					// if (c->solid && neiSolidCnt == 6) c->hidden = true;
+
+					blockdata_generated++;	
 				}
 			}
 		}
 	}
+	// std::cout << "dirty chunks " << world.dirtyChunks.size() << std::endl;
+	debug.dirty_chunks = world.dirtyChunks.size();
+
+	// weiter oben zuerst
+	std::sort(world.dirtyChunks.begin(), world.dirtyChunks.end(), [cameraPos](Chunk *a, Chunk *b) {
+		return a->pos.y > b->pos.y;
+	});
 
 	// regenereate mesh for chunks (TODO not all)
-	for (auto &[_, c] : world.chunkMap) {
-		if (c->needMeshUpdate) {
-			chunk_generate_mesh(c);
-			c->needMeshUpdate = false;
-		}
+	int mesh_generated = 0;
+	for (Chunk *c : world.dirtyChunks) {
+		if (mesh_generated == 2*MAX_GENERATIONS_PER_FRAME) break;
+		chunk_generate_mesh(c);
+		mesh_generated++;
 	}
+	// world.dirtyChunks.clear();
+	world.dirtyChunks.erase(world.dirtyChunks.begin(), world.dirtyChunks.begin() + mesh_generated);
+
+	debug.generated_chunks = world.chunkMap.size();
 }

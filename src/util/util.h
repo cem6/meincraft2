@@ -14,6 +14,8 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
+#include <algorithm>
+#include <unordered_set>
 
 #include "defines.h"
 

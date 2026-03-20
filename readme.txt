@@ -8,9 +8,9 @@ keybinds
 	e: set render mode to line
 
 TODO
-	(rewrite renderer)
+	aabb culling ?
+	! thread für inf worldgen (update chunks in window loop)
 
-	thread für inf worldgen
-
+	shader schatten
 	texture gedreht??, texture von seiten (gras)
 	antialiasing (window) und mipmap (texture)

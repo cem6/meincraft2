@@ -5,7 +5,9 @@
 #include "chunk.h"
 
 struct World {
-	std::unordered_map<glm::ivec3, Chunk*, PosHasher> chunkMap;
+	std::unordered_map<glm::ivec3, Chunk*, Vec3Hasher> chunkMap;
+	// std::unordered_map<glm::ivec2, int, Vec2Hasher> heightMap;
+	std::vector<Chunk*> dirtyChunks;
 };
 extern World world;
 

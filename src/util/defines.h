@@ -6,7 +6,7 @@
 constexpr int FRAME_DELAY = (1000 / TARGET_FPS);
 
 // renderer
-#define RENDER_DISTANCE 4 // radius
+#define RENDER_DISTANCE 8 // radius
 
 // camera
 constexpr float MOVESPEED = 20.0f;
@@ -18,4 +18,6 @@ constexpr float SENSITIVITY = 0.1f;
 #define CHUNK_SIZE_Z 32
 constexpr int CHUNK_VOLUME (CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z);
 
-#define WORLD_HEIGHT_CHUNKS 8
+// world
+#define MAX_GENERATIONS_PER_FRAME 4
+

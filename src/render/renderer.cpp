@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "../util/debug.h"
 
 GLuint shaderProgram;
 GLint modelLoc, viewLoc, projLoc, texLoc;
@@ -32,6 +33,7 @@ void _draw_chunk(Chunk *chunk) {
 }
 
 void _draw_radius(glm::vec3 cameraPos) {
+	int rendered_chunks = 0;
 	// camera pos -> chunk pos
 	int camX = floor(cameraPos.x / CHUNK_SIZE_X);
 	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
@@ -43,11 +45,16 @@ void _draw_radius(glm::vec3 cameraPos) {
 				glm::ivec3 pos(camX + x, camY + y, camZ + z);
 				// float distSq = (x*x) + (y*y) + (z*z);
 				// if (distSq > RENDER_DISTANCE*RENDER_DISTANCE) continue;
-				if (world.chunkMap.count(pos)) _draw_chunk(world.chunkMap[pos]);
+
+				if (world.chunkMap.count(pos) /* && !world.chunkMap[pos]->hidden */) {
+					rendered_chunks++;
+					_draw_chunk(world.chunkMap[pos]);
+				}
+
 			}
 		}
 	}
-	//
+	debug.rendered_chunks = rendered_chunks;
 }
 
 void renderer_draw_frame() {
@@ -64,8 +71,8 @@ void renderer_draw_frame() {
  	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-	// for (auto &[_, c] : world.chunkMap) _draw_chunk(c);
 	_draw_radius(camera.pos);
+	world_update_chunks(camera.pos); // limited generations per frame
 }
 
 void renderer_destroy() {

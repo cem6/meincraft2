@@ -1,5 +1,7 @@
 #include "window.h"
 
+#include "../util/debug.h"
+
 SDL_Window* window = nullptr;
 SDL_GLContext context = nullptr;
 
@@ -32,6 +34,8 @@ void window_create() {
 	glEnable(GL_DEPTH_TEST);
 	// glEnable(GL_MULTISAMPLE);
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+	debug_init(window, context);
 }
 
 void _destroy() {
@@ -46,7 +50,6 @@ void window_loop() {
 	Uint64 frameStart;
 	Uint64 lastFrameTime = SDL_GetTicks();
 	int frameTime;
-	int frameCount = 0;
 
 	bool running = true;
 	SDL_Event event;
@@ -58,6 +61,8 @@ void window_loop() {
 
 		// events
 		while (SDL_PollEvent(&event)) {
+			debug_pass_event(event);
+
 			if (event.type == SDL_EVENT_QUIT) running = false;
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				if (event.key.key == SDLK_ESCAPE) running = false;
@@ -66,29 +71,31 @@ void window_loop() {
 				// set lines
 				if (event.key.key == SDLK_E) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			}
-			// only move camera when mouse captured
-			if (event.type == SDL_EVENT_MOUSE_MOTION && SDL_GetWindowRelativeMouseMode(window)) {
+			// only move camera when mouse captured (and not in imgui)
+			if (event.type == SDL_EVENT_MOUSE_MOTION 
+				&& SDL_GetWindowRelativeMouseMode(window)
+				&& !ImGui::GetIO().WantCaptureMouse) {
 				camera_update_rotation(event.motion.xrel, event.motion.yrel);
 			}
 		}
 
 		camera_update_position(deltaTime);
 
+		debug_create_window();
+
 		// render
 		glClearColor(0.2f, 0.5f, 0.9f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		renderer_draw_frame();
-		if (frameCount == 60) {
-			frameCount = 0;
-			world_update_chunks(camera.pos);
-		}
+
+		debug_render();
+
 		SDL_GL_SwapWindow(window);
 
 		// wait if finished early
 		frameTime = SDL_GetTicks() - frameStart;
+		debug.frame_ms = frameTime;
 		if (FRAME_DELAY > frameTime) SDL_Delay(FRAME_DELAY - frameTime);
-
-		frameCount++;
 	}
 
 	_destroy();

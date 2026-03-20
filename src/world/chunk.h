@@ -25,11 +25,12 @@ struct Chunk {
 	int vertexCount;
 	glm::ivec3 pos;
 
-	// for world_update_chunk
-	bool needMeshUpdate = false;
+	// bool dirty = false; // need update mesh
+	// bool solid = true;
+	// bool hidden = false;
 };
 
-struct PosHasher {
+struct Vec3Hasher {
 	std::size_t operator()(const glm::ivec3 &v) const {
 		std::size_t h = 0;
 		auto hash_int = std::hash<int>{};
@@ -37,6 +38,18 @@ struct PosHasher {
 		h ^= hash_int(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
 		h ^= hash_int(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
 		h ^= hash_int(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+		return h;
+	}
+};
+
+struct Vec2Hasher {
+	std::size_t operator()(const glm::ivec2 &v) const {
+		std::size_t h = 0;
+		auto hash_int = std::hash<int>{};
+
+		h ^= hash_int(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
+		h ^= hash_int(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
 
 		return h;
 	}
