@@ -46,7 +46,7 @@ void _draw_radius(glm::vec3 cameraPos) {
 				// float distSq = (x*x) + (y*y) + (z*z);
 				// if (distSq > RENDER_DISTANCE*RENDER_DISTANCE) continue;
 
-				if (world.chunkMap.count(pos) /* && !world.chunkMap[pos]->hidden */) {
+				if (world.chunkMap.count(pos) && world_chunk_visible(pos)) {
 					rendered_chunks++;
 					_draw_chunk(world.chunkMap[pos]);
 				}

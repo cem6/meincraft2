@@ -16,4 +16,6 @@ void world_destroy();
 blocktype world_get_block(glm::ivec3);
 void world_update_chunks(glm::vec3 cameraPos);
 
+bool world_chunk_visible(glm::ivec3);
+
 #endif

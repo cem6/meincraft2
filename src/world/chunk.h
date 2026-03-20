@@ -8,6 +8,7 @@ enum blocktype {
 	STONE,
 	DIRT,
 	GRASS,
+	SAND,
 };
 
 enum face {
@@ -25,9 +26,8 @@ struct Chunk {
 	int vertexCount;
 	glm::ivec3 pos;
 
-	// bool dirty = false; // need update mesh
-	// bool solid = true;
-	// bool hidden = false;
+	bool dirty; // check duplicate before adding to dirty list
+	bool solid; // dont render when solid (no air) + all neighbors solid
 };
 
 struct Vec3Hasher {

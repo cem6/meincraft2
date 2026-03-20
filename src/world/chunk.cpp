@@ -30,6 +30,7 @@ glm::vec2 _get_atlas_coords(blocktype type) {
 	if (type == STONE) return glm::vec2(0, 15);
 	if (type == DIRT) return glm::vec2(1, 15);
 	if (type == GRASS) return glm::vec2(3, 14);
+	if (type == SAND) return glm::vec2(4, 14);
 	return glm::vec2(15, 0);
 }
 

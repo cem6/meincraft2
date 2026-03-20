@@ -11,6 +11,8 @@ TODO
 	aabb culling ?
 	! thread für inf worldgen (update chunks in window loop)
 
+	circular render area
+
 	shader schatten
 	texture gedreht??, texture von seiten (gras)
 	antialiasing (window) und mipmap (texture)
