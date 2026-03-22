@@ -1,8 +1,12 @@
 #include "camera.h"
 
+#include "../util/debug.h"
+
 Camera camera;
 
 void camera_update_rotation(float xoffset, float yoffset) {
+	if (camera.view_2d) return;
+
 	camera.yaw += xoffset * SENSITIVITY;
 	camera.pitch -= yoffset * SENSITIVITY;
 
@@ -15,8 +19,6 @@ void camera_update_rotation(float xoffset, float yoffset) {
 	dir.y = sin(glm::radians(camera.pitch));
 	dir.z = sin(glm::radians(camera.yaw)) * cos(glm::radians(camera.pitch));
 	camera.front = glm::normalize(dir);
-
-	// std::cout << "camera dir: "<< camera.front.x << " " << camera.front.y << " " << camera.front.z << std::endl;
 }
 
 void camera_update_position(float deltaTime) {
@@ -32,5 +34,7 @@ void camera_update_position(float deltaTime) {
 	if (state[SDL_SCANCODE_SPACE]) camera.pos.y += speed;
 	if (state[SDL_SCANCODE_LCTRL]) camera.pos.y -= speed;
 
-	// std::cout << "camera pos: "<< camera.pos.x << " " << camera.pos.y << " " << camera.pos.z << std::endl;
+	debug.x = camera.pos.x;
+	debug.y = camera.pos.y;
+	debug.z = camera.pos.z;
 }

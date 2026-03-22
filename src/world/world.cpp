@@ -6,7 +6,7 @@
 #include <chrono>
 std::chrono::steady_clock::time_point startTime;
 bool isMeasuring = false;
-int maxDC = 0;
+int max_dc = 0;
 
 World world;
 FastNoiseLite noise;
@@ -19,6 +19,25 @@ glm::ivec3 neighbors[6] = {
 	{0.0, 0.0, 1.0},
 	{0.0, 0.0, -1.0}
 };
+
+float _get_noise_height(float x, float z) {
+    float total = 0;
+    float frequency = 0.5f;  // How "stretched" the noise is
+    float amplitude = 1.2f;  // How "tall" the noise is
+    float maxValue = 0;      // Used for normalizing
+    int octaves = 8;         // How many layers of detail
+
+    for(int i = 0; i < octaves; i++) {
+        total += noise.GetNoise(x * frequency, z * frequency) * amplitude;
+        
+        maxValue += amplitude;
+        amplitude *= 0.5f;   // Each layer is half as tall (Persistence)
+        frequency *= 2.0f;   // Each layer is twice as detailed (Lacunarity)
+    }
+
+	total = pow(total, 2);
+    return (total / maxValue + 1) * CHUNK_SIZE_X + 16;
+}
 
 // TODO: move to chunk.
 Chunk* _generate_blockdata(glm::ivec3 pos) {
@@ -34,13 +53,14 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 
 	for (int x = 0; x < CHUNK_SIZE_X; x++) {
 		for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-			// int height = (int)(sin((xOffset + x) * 0.1f) * 3.0f + cos((zOffset + z) * 0.1f) * 3.0f) + 16;
-			int height = (noise.GetNoise(float(xOffset + x), float(zOffset + z)) + 1) * 16 + 16;
+			// int height = (noise.GetNoise(float(xOffset + x), float(zOffset + z)) + 1) * 32 + 16;
+			int height = _get_noise_height(xOffset + x, zOffset + z);
 
 			for (int y = 0; y < CHUNK_SIZE_Y; y++) {
 				int gy = yOffset + y;
 
-				if (gy > 32 && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
+				// ??????????????????????
+				if (gy > 52 && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
 				else if (gy < height - 3) 	c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
 				else if (gy == height) 		c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
 				else if (gy < height) 		c->blocks[chunk_pos_to_idx(x, y, z)] = DIRT;
@@ -58,9 +78,9 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 
 void _generate_initial_world() {
 	// create all block data
-	for (int cy = 0; cy < RENDER_DISTANCE/2; cy++) {
-		for (int cx = -RENDER_DISTANCE; cx < RENDER_DISTANCE; cx++) {
-			for (int cz = -RENDER_DISTANCE; cz < RENDER_DISTANCE; cz++) {
+	for (int cy = 0; cy < RENDER_DISTANCE/4; cy++) {
+		for (int cx = -RENDER_DISTANCE/2; cx < RENDER_DISTANCE/2; cx++) {
+			for (int cz = -RENDER_DISTANCE/2; cz < RENDER_DISTANCE/2; cz++) {
 				Chunk *c = new Chunk();
 				chunk_init(c, glm::ivec3(cx, cy, cz));
 				_generate_blockdata(glm::ivec3(cx, cy, cz));
@@ -75,7 +95,7 @@ void _generate_initial_world() {
 
 void world_init() {
 	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
-	// _generate_initial_world();
+	_generate_initial_world();
 }
 
 void world_destroy() {
@@ -145,7 +165,8 @@ void world_update_chunks(glm::vec3 cameraPos) {
 		for (int z = -d; z <= d; z++) {
 			if (std::abs(x) != d && std::abs(z) != d) continue; // only do outer "spiral"
 
-			int height = (noise.GetNoise(float(camX * CHUNK_SIZE_X + x), float(camZ * CHUNK_SIZE_Z + z)) + 1) * 16 + 16;
+			// int height = (noise.GetNoise(float(camX * CHUNK_SIZE_X + x), float(camZ * CHUNK_SIZE_Z + z)) + 1) * 32 + 16;
+			int height = _get_noise_height(camX * CHUNK_SIZE_X + x, camZ * CHUNK_SIZE_Z + z);
 
 			for (int y = RENDER_DISTANCE; y >= -RENDER_DISTANCE; y--) { // falschrum -> oben zuerst
 				if (blockdata_generated >= MAX_BLOCKDATA_GENERATIONS_PER_FRAME) break;
@@ -159,11 +180,13 @@ void world_update_chunks(glm::vec3 cameraPos) {
 				if (!world.chunkMap.count(pos)) { 
 					Chunk *c = _generate_blockdata(pos);
 
+					// iterate over neighbor chunks
 					for (int i = 0; i < 6; i++) {
 						glm::ivec3 neiPos = pos + neighbors[i];
-						// mark neighbors need mesh update
-						if (world.chunkMap.count(neiPos)) {
-							Chunk *nc = world.chunkMap[neiPos];
+						auto it = world.chunkMap.find(neiPos);
+						if (it != world.chunkMap.end()) {
+							Chunk *nc = it->second;
+							// mark neighbors need mesh update
 							if (!nc->dirty) {
 								nc->dirty = true;
 								world.dirtyChunks.push_back(world.chunkMap[neiPos]);
@@ -182,7 +205,7 @@ void world_update_chunks(glm::vec3 cameraPos) {
 
 	// std::cout << "dirty chunks " << world.dirtyChunks.size() << std::endl;
 	debug.dirty_chunks = world.dirtyChunks.size();
-	maxDC = std::max(maxDC, (int)world.dirtyChunks.size());
+	max_dc = std::max(max_dc, (int)world.dirtyChunks.size());
 
 	// sort -> generate closer chunks first
 	
@@ -224,7 +247,7 @@ void world_update_chunks(glm::vec3 cameraPos) {
 		auto endTime = std::chrono::steady_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
-		std::cout << "ms: " << duration.count() << ", max dirty chunks: " << maxDC << std::endl;
+		std::cout << "ms: " << duration.count() << ", max dirty chunks: " << max_dc << std::endl;
 		isMeasuring = false;
 	}
 }

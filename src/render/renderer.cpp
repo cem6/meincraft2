@@ -2,10 +2,11 @@
 #include "../util/debug.h"
 
 GLuint shaderProgram;
-GLint modelLoc, viewLoc, projLoc, texLoc;
+GLint modelLoc, viewLoc, projLoc, texLoc, camposLoc, lightposLoc;
 
 void renderer_init() {
-	shaderProgram = shader_create("res/shaders/cube.vert", "res/shaders/cube.frag");
+	// shaderProgram = shader_create("res/shaders/cube.vert", "res/shaders/cube.frag");
+	shaderProgram = shader_create("res/shaders/light.vert", "res/shaders/light.frag");
 	texture_create("res/images/atlas.png");
 	// texture_create("res/images/test.png");
 
@@ -13,6 +14,8 @@ void renderer_init() {
 	viewLoc  = glGetUniformLocation(shaderProgram, "view");
 	projLoc  = glGetUniformLocation(shaderProgram, "projection");
 	texLoc   = glGetUniformLocation(shaderProgram, "ourTexture");
+	camposLoc   	= glGetUniformLocation(shaderProgram, "camPos");
+	lightposLoc   	= glGetUniformLocation(shaderProgram, "lightPos");
 
 	world_init();
 }
@@ -39,40 +42,70 @@ void _draw_radius(glm::vec3 cameraPos) {
 	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
 	int camZ = floor(cameraPos.z / CHUNK_SIZE_Z);
 
+	const int maxDistSq = RENDER_DISTANCE * RENDER_DISTANCE;
+	
+	// schrittweise kreis optimization
 	for (int x = -RENDER_DISTANCE; x <= RENDER_DISTANCE; x++) {
-		for (int y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
-			for (int z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+	// for (int tx = 0; tx <= 2*RENDER_DISTANCE; tx++) {
+	// 	int x = (tx % 2 == 0) ? tx/2 : -( (tx+1)/2 );
+		int xSq = x * x;
+		for (int z = -RENDER_DISTANCE; z <= RENDER_DISTANCE; z++) {
+		// for (int tz = 0; tz <= 2*RENDER_DISTANCE; tz++) {
+		// 	int z = (tz % 2 == 0) ? tz/2 : -( (tz+1)/2 );
+			int xzSq = xSq + (z * z);
+
+			// x z dist far enough -> skip y
+			if (xzSq > maxDistSq) continue;
+
+			for (int y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
+				// kompletter kreis
+				if (xzSq + (y * y) > maxDistSq) continue; 
 				glm::ivec3 pos(camX + x, camY + y, camZ + z);
-				// float distSq = (x*x) + (y*y) + (z*z);
-				// if (distSq > RENDER_DISTANCE*RENDER_DISTANCE) continue;
 
-				if (world.chunkMap.count(pos) && world_chunk_visible(pos)) {
+				auto it = world.chunkMap.find(pos);
+				if (it != world.chunkMap.end() && world_chunk_visible(pos)) {
 					rendered_chunks++;
-					_draw_chunk(world.chunkMap[pos]);
+					_draw_chunk(it->second);
 				}
-
 			}
 		}
 	}
+
 	debug.rendered_chunks = rendered_chunks;
 }
 
 void renderer_draw_frame() {
 	glUseProgram(shaderProgram);
 
+	// light
+	glUniform3f(camposLoc, camera.pos.x, camera.pos.y, camera.pos.z);
+	glUniform3f(lightposLoc, 0.0f, 200.0f, 0.0f);
+
 	// texture
 	glActiveTexture(GL_TEXTURE0);	
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glUniform1i(texLoc, 0);
 
-	// math
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
-	glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
+	// camera math
+	glm::mat4 projection;
+	glm::mat4 view;
+	if (!camera.view_2d) {
+		// 3d camera
+		projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
+		view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
+	}
+	else {
+		// 2d camera
+		const float aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
+		const float zoom = (RENDER_DISTANCE * CHUNK_SIZE_X) + 32.0f; // 300.0f;
+		projection = glm::ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.1f, 1000.0f);
+		view = glm::lookAt(camera.pos + glm::vec3(0, 100, 0), camera.pos, glm::vec3(1, 0, 0));
+	}
  	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-	_draw_radius(camera.pos);
 	world_update_chunks(camera.pos); // limited generations per frame
+	_draw_radius(camera.pos);
 }
 
 void renderer_destroy() {

@@ -23,10 +23,11 @@ void debug_create_window() {
 	ImGui::NewFrame();
 
 	ImGui::Begin(" ");
+	ImGui::Text("%d %d %d", debug.x, debug.y, debug.z);
+	ImGui::Text("ms: %d", debug.frame_ms);
 	ImGui::Text("rendered chunks: %d", debug.rendered_chunks);
 	ImGui::Text("generated chunks: %d", debug.generated_chunks);
 	ImGui::Text("dirty chunks: %d", debug.dirty_chunks);
-	ImGui::Text("ms: %d", debug.frame_ms);
 	ImGui::End();
 }
 

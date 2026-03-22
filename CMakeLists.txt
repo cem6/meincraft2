@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ?
 find_package(SDL3 REQUIRED)
 # find_package(OpenGl REQUIRED)
 
@@ -44,7 +45,6 @@ add_executable(Voxel
 	lib/imgui/imstb_rectpack.h
 	lib/imgui/imstb_textedit.h
 	lib/imgui/imstb_truetype.h
-
     lib/imgui/backends/imgui_impl_sdl3.cpp
     lib/imgui/backends/imgui_impl_opengl3.cpp
     lib/imgui/misc/cpp/imgui_stdlib.cpp

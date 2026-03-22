@@ -33,6 +33,11 @@ void window_create() {
 	renderer_init();
 	glEnable(GL_DEPTH_TEST);
 	// glEnable(GL_MULTISAMPLE);
+	//
+	// glEnable(GL_CULL_FACE);
+	// glCullFace(GL_BACK);
+	// glFrontFace(GL_CCW);
+
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	debug_init(window, context);
@@ -69,7 +74,14 @@ void window_loop() {
 				// toggle capture mouse
 				if (event.key.key == SDLK_B) SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window)); 
 				// set lines
-				if (event.key.key == SDLK_E) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				if (event.key.key == SDLK_E) {
+					int polygonMode[2];
+					glGetIntegerv(GL_POLYGON_MODE, polygonMode);
+					if (polygonMode[0] == GL_LINE) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+					else glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				}
+				// toggle camera mode
+				if (event.key.key == SDLK_C) camera.toggle_view();
 			}
 			// only move camera when mouse captured (and not in imgui)
 			if (event.type == SDL_EVENT_MOUSE_MOTION 

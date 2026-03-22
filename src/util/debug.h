@@ -8,6 +8,7 @@
 #include "backends/imgui_impl_opengl3.h"
 
 extern struct Debug {
+	int x, y, z;
 	int rendered_chunks;
 	int generated_chunks;
 	int dirty_chunks;

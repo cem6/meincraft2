@@ -1,18 +1,23 @@
 dependencies
-	SDL, 
+	SDL3, 
 	sonst alles mit drin
 
 keybinds
 	wasd, space, ctrl: move
 	b: toggle capture mouse	
-	e: set render mode to line
+	e: togggle render mode line
+	c: toggle 2d camera
 
 TODO
 	aabb culling ?
-	! thread für inf worldgen (update chunks in window loop)
+	cache chunkMap
 
-	circular render area
-
-	shader schatten
-	texture gedreht??, texture von seiten (gras)
+	atlas with gaps
 	antialiasing (window) und mipmap (texture)
+
+	noise besser
+	physik
+	bauen
+
+SPÄTER
+	thread für inf worldgen 

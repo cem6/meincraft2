@@ -4,9 +4,10 @@
 
 int chunk_pos_to_idx(int x, int y, int z) {
 	return x * CHUNK_SIZE_X * CHUNK_SIZE_Z + z * CHUNK_SIZE_Z + y;
+	// return y * CHUNK_SIZE_X * CHUNK_SIZE_Z + z * CHUNK_SIZE_X + x;
 }
 int chunk_pos_to_idx(glm::ivec3 p) {
-	return p.x * CHUNK_SIZE_X * CHUNK_SIZE_Z + p.z * CHUNK_SIZE_Z + p.y;
+	return chunk_pos_to_idx(p.x, p.y, p.z);
 }
 
 bool _block_is_transparent(Chunk *chunk, int x, int y, int z) {
@@ -25,22 +26,27 @@ bool _block_is_transparent(Chunk *chunk, int x, int y, int z) {
 	return chunk->blocks[chunk_pos_to_idx(x, y, z)] == AIR;
 }
 
+glm::vec2 _get_atlas_coords(blocktype type, face fi) {
+	switch (type) {
+		case STONE: return glm::vec2(0, 15);
+		case DIRT: 	return glm::vec2(1, 15);
+		case SAND: 	return glm::vec2(4, 14);
+		case GRASS: 
+			if (fi == TOP) 		return glm::vec2(3, 15);
+			if (fi == BOTTOM) 	return glm::vec2(1, 15);
+			return glm::vec2(2, 15);
 
-glm::vec2 _get_atlas_coords(blocktype type) {
-	if (type == STONE) return glm::vec2(0, 15);
-	if (type == DIRT) return glm::vec2(1, 15);
-	if (type == GRASS) return glm::vec2(3, 14);
-	if (type == SAND) return glm::vec2(4, 14);
-	return glm::vec2(15, 0);
+		default: return glm::vec2(15, 0);
+	};
 }
 
 void _add_face(std::vector<float> &vertices, int x, int y, int z, blocktype block, face fi) {
-	glm::vec2 atlasPos = _get_atlas_coords(block);
+	glm::vec2 atlasPos = _get_atlas_coords(block, fi);
 	const float step = 0.0625f; // 1/16 tiles in atlas
 	// const float step = 1;
 
 	for (int i = 0; i < 6; i++) {
-		int offset = i * 5;
+		int offset = i * 8;
 
 		// positions
 		vertices.push_back(face_data[fi][offset + 0] + x);
@@ -50,6 +56,11 @@ void _add_face(std::vector<float> &vertices, int x, int y, int z, blocktype bloc
 		// textures
 		vertices.push_back((atlasPos.x + face_data[fi][offset + 3]) * step);
 		vertices.push_back((atlasPos.y + face_data[fi][offset + 4]) * step);
+	
+		// normals
+		vertices.push_back((face_data[fi][offset + 5]));
+		vertices.push_back((face_data[fi][offset + 6]));
+		vertices.push_back((face_data[fi][offset + 7]));
 	}
 }
 
@@ -93,12 +104,16 @@ void chunk_init(Chunk *chunk, glm::ivec3 pos) {
 	// glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
 	// texture
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+
+	// normals
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 
 	// unbind
 	// glBindBuffer(GL_ARRAY_BUFFER, 0);
