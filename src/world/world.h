@@ -3,6 +3,7 @@
 
 #include "../util/util.h"
 #include "chunk.h"
+#include "../render/culling.h"
 
 struct World {
 	std::unordered_map<glm::ivec3, Chunk*, Vec3Hasher> chunkMap;

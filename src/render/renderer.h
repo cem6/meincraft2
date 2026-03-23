@@ -5,6 +5,7 @@
 #include "shader.h"
 #include "camera.h"
 #include "texture.h"
+#include "culling.h"
 
 #include "../world/chunk.h"
 #include "../world/world.h"

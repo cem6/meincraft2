@@ -9,8 +9,11 @@ keybinds
 	c: toggle 2d camera
 
 TODO
-	aabb culling ?
-	cache chunkMap
+	optimize culling: generation queue: move -> push chunks, sort
+										frame -> update: pop and generate
+	? cache chunkMap
+
+	moving lightpos
 
 	atlas with gaps
 	antialiasing (window) und mipmap (texture)

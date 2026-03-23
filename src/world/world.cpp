@@ -95,7 +95,7 @@ void _generate_initial_world() {
 
 void world_init() {
 	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
-	_generate_initial_world();
+	// _generate_initial_world();
 }
 
 void world_destroy() {
@@ -218,7 +218,7 @@ void world_update_chunks(glm::vec3 cameraPos) {
 	// 	return distA < distB;
 	// });
 
-	// bisschen besser als sort
+	// bisschen schneller als sort
 	int limit = std::min((int)world.dirtyChunks.size(), MAX_MESH_GENERATIONS_PER_FRAME);
 	std::nth_element(world.dirtyChunks.begin(), world.dirtyChunks.begin() + limit, world.dirtyChunks.end(), [&cameraPos](Chunk *a, Chunk *b) {
 		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 

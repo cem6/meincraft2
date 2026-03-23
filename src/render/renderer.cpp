@@ -55,15 +55,17 @@ void _draw_radius(glm::vec3 cameraPos) {
 			int xzSq = xSq + (z * z);
 
 			// x z dist far enough -> skip y
-			if (xzSq > maxDistSq) continue;
+			if (xzSq >= maxDistSq) continue;
 
 			for (int y = -RENDER_DISTANCE; y <= RENDER_DISTANCE; y++) {
 				// kompletter kreis
-				if (xzSq + (y * y) > maxDistSq) continue; 
+				// if (xzSq + (y * y) > maxDistSq) continue; 
+				// kein y limit ?
 				glm::ivec3 pos(camX + x, camY + y, camZ + z);
 
 				auto it = world.chunkMap.find(pos);
-				if (it != world.chunkMap.end() && world_chunk_visible(pos)) {
+				// if (it != world.chunkMap.end() && world_chunk_visible(pos)) {
+				if (it != world.chunkMap.end() && world_chunk_visible(pos) && culling_chunk_visible(pos)) {
 					rendered_chunks++;
 					_draw_chunk(it->second);
 				}
@@ -89,20 +91,23 @@ void renderer_draw_frame() {
 	// camera math
 	glm::mat4 projection;
 	glm::mat4 view;
+	// 3d camera, fov: 45.0 -> 70, 59 -> 90
 	if (!camera.view_2d) {
-		// 3d camera
-		projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
+		projection = glm::perspective(glm::radians(50.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
 		view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
+		// culling
+		if (!camera.view_2d) culling_update_planes(projection * view);
 	}
+	// 2d camera
 	else {
-		// 2d camera
 		const float aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
 		const float zoom = (RENDER_DISTANCE * CHUNK_SIZE_X) + 32.0f; // 300.0f;
 		projection = glm::ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.1f, 1000.0f);
 		view = glm::lookAt(camera.pos + glm::vec3(0, 100, 0), camera.pos, glm::vec3(1, 0, 0));
 	}
- 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	
 
 	world_update_chunks(camera.pos); // limited generations per frame
 	_draw_radius(camera.pos);

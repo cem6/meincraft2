@@ -26,6 +26,8 @@ add_executable(Voxel
 	src/render/camera.cpp
 	src/render/texture.h
 	src/render/texture.cpp
+	src/render/culling.h
+	src/render/culling.cpp
 
 	src/world/chunk.h
 	src/world/chunk.cpp
