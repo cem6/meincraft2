@@ -89,17 +89,12 @@ void renderer_draw_frame() {
 	glUniform1i(texLoc, 0);
 
 	// camera math
-	glm::mat4 projection;
-	glm::mat4 view;
-	// 3d camera, fov: 45.0 -> 70, 59 -> 90
-	if (!camera.view_2d) {
-		projection = glm::perspective(glm::radians(50.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
-		view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
-		// culling
-		if (!camera.view_2d) culling_update_planes(projection * view);
-	}
+	// 3d camera, fov: 45.0 -> 70, 59 -> 90, always calculate for culling
+	glm::mat4 projection = glm::perspective(glm::radians(59.0f), (float)WINDOW_WIDTH / WINDOW_HEIGHT, 0.5f, 800.0f);
+	glm::mat4 view = glm::lookAt(camera.pos, camera.pos + camera.front, camera.up);
+	if (FRUSTUM_CULLING) culling_update_planes(projection * view);
 	// 2d camera
-	else {
+	if (camera.view_2d) {
 		const float aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
 		const float zoom = (RENDER_DISTANCE * CHUNK_SIZE_X) + 32.0f; // 300.0f;
 		projection = glm::ortho(-aspect * zoom, aspect * zoom, -zoom, zoom, 0.1f, 1000.0f);
@@ -108,8 +103,12 @@ void renderer_draw_frame() {
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 	
+	static int frameCnt = 0;
+	if (frameCnt++ % 20 == 0) world_update_load_queue(camera.pos);
 
-	world_update_chunks(camera.pos); // limited generations per frame
+	// world_update_chunks(camera.pos); // limited generations per frame
+	world_process_blockdata_generation(camera.pos);
+	world_process_mesh_generation(camera.pos);
 	_draw_radius(camera.pos);
 }
 

@@ -9,6 +9,7 @@ enum blocktype {
 	DIRT,
 	GRASS,
 	SAND,
+	WATER,
 };
 
 enum face {

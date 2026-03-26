@@ -30,11 +30,12 @@ glm::vec2 _get_atlas_coords(blocktype type, face fi) {
 	switch (type) {
 		case STONE: return glm::vec2(0, 15);
 		case DIRT: 	return glm::vec2(1, 15);
-		case SAND: 	return glm::vec2(4, 14);
+		case SAND: 	return glm::vec2(4, 15);
 		case GRASS: 
 			if (fi == TOP) 		return glm::vec2(3, 15);
 			if (fi == BOTTOM) 	return glm::vec2(1, 15);
 			return glm::vec2(2, 15);
+		case WATER: return glm::vec2(7, 15);
 
 		default: return glm::vec2(15, 0);
 	};
@@ -44,13 +45,19 @@ void _add_face(std::vector<float> &vertices, int x, int y, int z, blocktype bloc
 	glm::vec2 atlasPos = _get_atlas_coords(block, fi);
 	const float step = 0.0625f; // 1/16 tiles in atlas
 	// const float step = 1;
+	
+	// water top bisschen runter
+	float yOffset = 0;
+	// if (block == WATER && fi == TOP) {
+	// 	yOffset = -0.1f;
+	// }
 
 	for (int i = 0; i < 6; i++) {
 		int offset = i * 8;
 
 		// positions
 		vertices.push_back(face_data[fi][offset + 0] + x);
-		vertices.push_back(face_data[fi][offset + 1] + y);
+		vertices.push_back(face_data[fi][offset + 1] + y + yOffset);
 		vertices.push_back(face_data[fi][offset + 2] + z);
 
 		// textures

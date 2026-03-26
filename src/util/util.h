@@ -13,9 +13,11 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include <vector>
 #include <algorithm>
+
 #include <unordered_set>
+#include <vector>
+#include <deque>
 
 #include "defines.h"
 

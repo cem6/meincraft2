@@ -6,7 +6,8 @@
 constexpr int FRAME_DELAY = (1000 / TARGET_FPS);
 
 // renderer
-#define RENDER_DISTANCE 8 // radius
+#define RENDER_DISTANCE 16 // radius
+#define FRUSTUM_CULLING true
 
 // camera
 constexpr float MOVESPEED = 20.0f;

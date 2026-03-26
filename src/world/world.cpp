@@ -22,8 +22,8 @@ glm::ivec3 neighbors[6] = {
 
 float _get_noise_height(float x, float z) {
     float total = 0;
-    float frequency = 0.5f;  // How "stretched" the noise is
-    float amplitude = 1.2f;  // How "tall" the noise is
+    float frequency = 0.4f;  // How "stretched" the noise is
+    float amplitude = 1.5f;  // How "tall" the noise is
     float maxValue = 0;      // Used for normalizing
     int octaves = 8;         // How many layers of detail
 
@@ -60,9 +60,13 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 				int gy = yOffset + y;
 
 				// ??????????????????????
-				if (gy > 52 && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
-				else if (gy < height - 3) 	c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
-				else if (gy == height) 		c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
+				if (gy > 58 && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
+				// else if (gy < height - 3) 	c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
+				else if (gy == height) 	{
+					if (height > 50) c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
+					else c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
+				}
+				else if (gy == 49)			c->blocks[chunk_pos_to_idx(x, y, z)] = WATER;
 				else if (gy < height) 		c->blocks[chunk_pos_to_idx(x, y, z)] = DIRT;
 				else {
 					c->solid = false;
@@ -146,7 +150,7 @@ bool world_chunk_visible(glm::ivec3 pos) {
 }
 
 void world_update_chunks(glm::vec3 cameraPos) {
-	// render time test
+	// generate time test
 	if (!world.dirtyChunks.empty() && !isMeasuring) {
 		startTime = std::chrono::steady_clock::now();
 		isMeasuring = true;
@@ -242,7 +246,129 @@ void world_update_chunks(glm::vec3 cameraPos) {
 
 	debug.generated_chunks = world.chunkMap.size();
 
-	// render time test
+	// generate time test
+	if (isMeasuring && world.dirtyChunks.empty()) {
+		auto endTime = std::chrono::steady_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+
+		std::cout << "ms: " << duration.count() << ", max dirty chunks: " << max_dc << std::endl;
+		isMeasuring = false;
+	}
+}
+
+void world_update_load_queue(glm::vec3 cameraPos) {
+	// generate time test START
+	if (!world.dirtyChunks.empty() && !isMeasuring) {
+		startTime = std::chrono::steady_clock::now();
+		isMeasuring = true;
+	}
+
+	int camX = floor(cameraPos.x / CHUNK_SIZE_X);
+	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
+	int camZ = floor(cameraPos.z / CHUNK_SIZE_Z);
+
+	for (int d = 0; d <= RENDER_DISTANCE; d++) {
+		for (int x = -d; x <= d; x++) {
+			for (int z = -d; z <= d; z++) {
+				if (std::abs(x) != d && std::abs(z) != d) continue;
+
+				int height = _get_noise_height((camX + x) * CHUNK_SIZE_X, (camZ + z) * CHUNK_SIZE_Z);
+
+				for (int y = RENDER_DISTANCE; y >= -RENDER_DISTANCE; y--) {
+					if ((camY + y - 1) * CHUNK_SIZE_Y > height) continue; // dont generate sky chunks
+					if ((camY + y) * CHUNK_SIZE_Y < MIN_Y) continue; // dont generate zu weit unten
+
+					glm::ivec3 pos(camX + x, camY + y, camZ + z);
+					if (!world.chunkMap.count(pos) && !world.pendingChunks.count(pos)) {
+						world.loadQ.push_back(pos);
+						world.pendingChunks.insert(pos);
+					}
+				}
+			}
+		}
+	}
+}
+
+void world_process_blockdata_generation(glm::vec3 cameraPos) {
+	if (world.loadQ.empty()) {
+		debug.dirty_chunks = world.dirtyChunks.size();
+		return;
+	};
+
+	// TODO: make single sort function
+	int limit = std::min((int)world.loadQ.size(), MAX_BLOCKDATA_GENERATIONS_PER_FRAME);
+	std::nth_element(world.loadQ.begin(), world.loadQ.begin() + limit, world.loadQ.end(), [&cameraPos](glm::ivec3 &a, glm::ivec3 &b) {
+		bool visA = culling_chunk_visible(a);
+		bool visB = culling_chunk_visible(b);
+		if (visA != visB) return visA; // not both visible -> prioritize visible
+
+		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
+							floor(cameraPos.y / CHUNK_SIZE_Y), 
+							floor(cameraPos.z / CHUNK_SIZE_Z));
+		int distA = std::abs(a.x - c.x) + std::abs(a.y - c.y) + std::abs(a.z - c.z);
+		int distB = std::abs(b.x - c.x) + std::abs(b.y - c.y) + std::abs(b.z - c.z);
+		return distA < distB;
+	});
+
+	int generated = 0;
+	for (glm::ivec3 pos : world.loadQ) {
+		if (generated == limit) break;
+
+		world.pendingChunks.erase(pos);
+		Chunk *c = _generate_blockdata(pos);
+
+		// mark neighbors dirty for mesh generation
+		for (int i = 0; i < 6; i++) {
+			glm::ivec3 neiPos = pos + neighbors[i];
+			auto it = world.chunkMap.find(neiPos);
+
+			if (it != world.chunkMap.end()) {
+				Chunk *nc = it->second;
+				// mark neighbors need mesh update
+				if (!nc->dirty) {
+					nc->dirty = true;
+					world.dirtyChunks.push_back(nc);
+				}
+			}
+		}
+		generated++;
+	}
+	world.loadQ.erase(world.loadQ.begin(), world.loadQ.begin() + generated);
+
+	debug.dirty_chunks = world.dirtyChunks.size();
+	max_dc = std::max(max_dc, (int)world.dirtyChunks.size());
+}
+
+void world_process_mesh_generation(glm::vec3 cameraPos) {
+	if (world.dirtyChunks.empty()) return;
+
+	int limit = std::min((int)world.dirtyChunks.size(), MAX_MESH_GENERATIONS_PER_FRAME);
+	std::nth_element(world.dirtyChunks.begin(), world.dirtyChunks.begin() + limit, world.dirtyChunks.end(), [&cameraPos](Chunk *a, Chunk *b) {
+		bool visA = culling_chunk_visible(a->pos);
+		bool visB = culling_chunk_visible(b->pos);
+		if (visA != visB) return visA; // not both visible -> prioritize visible
+
+		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
+							floor(cameraPos.y / CHUNK_SIZE_Y), 
+							floor(cameraPos.z / CHUNK_SIZE_Z));
+		int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.y - c.y) + std::abs(a->pos.z - c.z);
+		int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.y - c.y) + std::abs(b->pos.z - c.z);
+		return distA < distB;
+	});
+
+
+	int generated = 0;
+	for (Chunk *c : world.dirtyChunks) {
+		if (generated == limit) break;
+		chunk_generate_mesh(c);
+		c->dirty = false;
+		generated++;
+	}
+	world.dirtyChunks.erase(world.dirtyChunks.begin(), world.dirtyChunks.begin() + generated);
+
+	debug.generated_chunks = world.chunkMap.size();
+
+	// generate time test END
 	if (isMeasuring && world.dirtyChunks.empty()) {
 		auto endTime = std::chrono::steady_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);

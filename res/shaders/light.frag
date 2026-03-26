@@ -24,10 +24,10 @@ void main() {
 	vec3 diffuse = diff * lightColor;
 
 	// specular
-	float specularStrength = 0.2;
+	float specularStrength = 0.1;
 	vec3 viewDir = normalize(camPos - FragPos);
 	vec3 reflectDir = reflect(-lightDir, norm);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 2);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 8);
 	vec3 specular = specularStrength * spec * lightColor;
 
 	vec3 result = (ambient + diffuse + specular) * texture(ourTexture, TexCoord).rgb;

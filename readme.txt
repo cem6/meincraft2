@@ -9,18 +9,16 @@ keybinds
 	c: toggle 2d camera
 
 TODO
-	optimize culling: generation queue: move -> push chunks, sort
-										frame -> update: pop and generate
+	thread für chunkgen
+
 	? cache chunkMap
 
 	moving lightpos
 
+	transparent water
 	atlas with gaps
 	antialiasing (window) und mipmap (texture)
 
 	noise besser
 	physik
 	bauen
-
-SPÄTER
-	thread für inf worldgen 
