@@ -9,16 +9,12 @@ keybinds
 	c: toggle 2d camera
 
 TODO
-	thread für chunkgen
+	better light ?
 
-	? cache chunkMap
-
-	moving lightpos
-
-	transparent water
-	atlas with gaps
-	antialiasing (window) und mipmap (texture)
+	transparent blocks
 
 	noise besser
 	physik
 	bauen
+
+	threads für chunkgen

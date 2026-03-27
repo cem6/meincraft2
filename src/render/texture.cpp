@@ -17,17 +17,11 @@ void texture_create(const char* path) {
 	// load img
 	int width, height, channels;
 	stbi_set_flip_vertically_on_load(true); // match opengl orientation
-	unsigned char *img = stbi_load(path, &width, &height, &channels, 0);
-
-	// für atlas nur rgba nötig
-	GLenum internalFormat, dataFormat;
-	if (channels == 4) 		{ internalFormat = GL_RGBA8; dataFormat = GL_RGBA; }
-	else if (channels == 3) { internalFormat = GL_RGB8; dataFormat = GL_RGB; }
-	else 					{ internalFormat = GL_RED; dataFormat = GL_RED; }
+	unsigned char *img = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
 
 	if (img) {
-		glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, img);
-		glGenerateMipmap(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);
+		// glGenerateMipmap(GL_TEXTURE_2D);
 	}
 	else std::cerr << "Error: stbi load failed: " << path << std::endl;
 

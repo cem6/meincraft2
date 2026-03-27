@@ -22,10 +22,10 @@ glm::ivec3 neighbors[6] = {
 
 float _get_noise_height(float x, float z) {
     float total = 0;
-    float frequency = 0.4f;  // How "stretched" the noise is
-    float amplitude = 1.5f;  // How "tall" the noise is
+    float frequency = 0.7f;  // How "stretched" the noise is
+    float amplitude = 1.2f;  // How "tall" the noise is
     float maxValue = 0;      // Used for normalizing
-    int octaves = 8;         // How many layers of detail
+    int octaves = 6;         // How many layers of detail
 
     for(int i = 0; i < octaves; i++) {
         total += noise.GetNoise(x * frequency, z * frequency) * amplitude;
@@ -35,8 +35,9 @@ float _get_noise_height(float x, float z) {
         frequency *= 2.0f;   // Each layer is twice as detailed (Lacunarity)
     }
 
-	total = pow(total, 2);
-    return (total / maxValue + 1) * CHUNK_SIZE_X + 16;
+	if (total > 0) total = total*total;
+	else total = 1.5*total;
+	return (total / maxValue + 1) * CHUNK_SIZE_X + 16;
 }
 
 // TODO: move to chunk.
@@ -53,31 +54,30 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 
 	for (int x = 0; x < CHUNK_SIZE_X; x++) {
 		for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-			// int height = (noise.GetNoise(float(xOffset + x), float(zOffset + z)) + 1) * 32 + 16;
 			int height = _get_noise_height(xOffset + x, zOffset + z);
+			// world.heightMap[glm::ivec2(pos.x, pos.z)] = std::max(height, world.heightMap[glm::ivec2(pos.x, pos.z)]);
 
 			for (int y = 0; y < CHUNK_SIZE_Y; y++) {
 				int gy = yOffset + y;
 
 				// ??????????????????????
-				if (gy > 58 && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
+				if (gy > 1.2*SEA_LEVEL && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
 				// else if (gy < height - 3) 	c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
-				else if (gy == height) 	{
-					if (height > 50) c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
-					else c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
-				}
-				else if (gy == 49)			c->blocks[chunk_pos_to_idx(x, y, z)] = WATER;
-				else if (gy < height) 		c->blocks[chunk_pos_to_idx(x, y, z)] = DIRT;
+				else if (gy == height && height > SEA_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
+				else if (gy < height && height <= SEA_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
+				else if (gy < height) c->blocks[chunk_pos_to_idx(x, y, z)] = DIRT;
+				else if (gy == SEA_LEVEL)	c->blocks[chunk_pos_to_idx(x, y, z)] = WATER;
 				else {
 					c->solid = false;
 					c->blocks[chunk_pos_to_idx(x, y, z)] = AIR;
 				}
+
 			}
 
 		}
 	}
 
-	return world.chunkMap[c->pos] = c;
+	return world.chunkMap[pos] = c;
 }
 
 void _generate_initial_world() {
@@ -149,113 +149,6 @@ bool world_chunk_visible(glm::ivec3 pos) {
     return false; // 6 solid neighbors -> hidden
 }
 
-void world_update_chunks(glm::vec3 cameraPos) {
-	// generate time test
-	if (!world.dirtyChunks.empty() && !isMeasuring) {
-		startTime = std::chrono::steady_clock::now();
-		isMeasuring = true;
-	}
-
-	int camX = floor(cameraPos.x / CHUNK_SIZE_X);
-	int camY = floor(cameraPos.y / CHUNK_SIZE_Y);
-	int camZ = floor(cameraPos.z / CHUNK_SIZE_Z);
-
-	// --- generate blockdata
-	int blockdata_generated = 0;
-
-	// spiral pattern -> closer chunks first (sozusagen)
-	for (int d = 0; d <= RENDER_DISTANCE; d++) {
-		for (int x = -d; x <= d; x++) { 
-		for (int z = -d; z <= d; z++) {
-			if (std::abs(x) != d && std::abs(z) != d) continue; // only do outer "spiral"
-
-			// int height = (noise.GetNoise(float(camX * CHUNK_SIZE_X + x), float(camZ * CHUNK_SIZE_Z + z)) + 1) * 32 + 16;
-			int height = _get_noise_height(camX * CHUNK_SIZE_X + x, camZ * CHUNK_SIZE_Z + z);
-
-			for (int y = RENDER_DISTANCE; y >= -RENDER_DISTANCE; y--) { // falschrum -> oben zuerst
-				if (blockdata_generated >= MAX_BLOCKDATA_GENERATIONS_PER_FRAME) break;
-
-				// dont generate sky chunks
-				if ((camY + y - 1) * CHUNK_SIZE_Y > height) continue;
-				// dont generate zu weit unten
-				if ((camY + y) * CHUNK_SIZE_Y < MIN_Y) continue;
-
-				glm::ivec3 pos(camX + x, camY + y, camZ + z);
-				if (!world.chunkMap.count(pos)) { 
-					Chunk *c = _generate_blockdata(pos);
-
-					// iterate over neighbor chunks
-					for (int i = 0; i < 6; i++) {
-						glm::ivec3 neiPos = pos + neighbors[i];
-						auto it = world.chunkMap.find(neiPos);
-						if (it != world.chunkMap.end()) {
-							Chunk *nc = it->second;
-							// mark neighbors need mesh update
-							if (!nc->dirty) {
-								nc->dirty = true;
-								world.dirtyChunks.push_back(world.chunkMap[neiPos]);
-							}
-						}
-					}
-
-					blockdata_generated++;	
-				}
-			}
-		}
-		}
-	}
-
-	// --- generate mesh
-
-	// std::cout << "dirty chunks " << world.dirtyChunks.size() << std::endl;
-	debug.dirty_chunks = world.dirtyChunks.size();
-	max_dc = std::max(max_dc, (int)world.dirtyChunks.size());
-
-	// sort -> generate closer chunks first
-	
-	// std::sort(world.dirtyChunks.begin(), world.dirtyChunks.end(), [&cameraPos](Chunk *a, Chunk *b) {
-	// 	glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
-	// 						floor(cameraPos.y / CHUNK_SIZE_Y), 
-	// 						floor(cameraPos.z / CHUNK_SIZE_Z));
-	// 	int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.y - c.y) + std::abs(a->pos.z - c.z);
-	// 	int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.y - c.y) + std::abs(b->pos.z - c.z);
-	// 	return distA < distB;
-	// });
-
-	// bisschen schneller als sort
-	int limit = std::min((int)world.dirtyChunks.size(), MAX_MESH_GENERATIONS_PER_FRAME);
-	std::nth_element(world.dirtyChunks.begin(), world.dirtyChunks.begin() + limit, world.dirtyChunks.end(), [&cameraPos](Chunk *a, Chunk *b) {
-		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
-							floor(cameraPos.y / CHUNK_SIZE_Y), 
-							floor(cameraPos.z / CHUNK_SIZE_Z));
-		int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.y - c.y) + std::abs(a->pos.z - c.z);
-		int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.y - c.y) + std::abs(b->pos.z - c.z);
-		return distA < distB;
-	});
-
-	// regenereate mesh for chunks
-	int mesh_generated = 0;
-	for (Chunk *c : world.dirtyChunks) {
-		if (mesh_generated == MAX_MESH_GENERATIONS_PER_FRAME) break;
-		chunk_generate_mesh(c);
-		c->dirty = false;
-		mesh_generated++;
-	}
-	// world.dirtyChunks.clear();
-	world.dirtyChunks.erase(world.dirtyChunks.begin(), world.dirtyChunks.begin() + mesh_generated);
-
-	debug.generated_chunks = world.chunkMap.size();
-
-	// generate time test
-	if (isMeasuring && world.dirtyChunks.empty()) {
-		auto endTime = std::chrono::steady_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-
-		std::cout << "ms: " << duration.count() << ", max dirty chunks: " << max_dc << std::endl;
-		isMeasuring = false;
-	}
-}
-
 void world_update_load_queue(glm::vec3 cameraPos) {
 	// generate time test START
 	if (!world.dirtyChunks.empty() && !isMeasuring) {
@@ -302,12 +195,23 @@ void world_process_blockdata_generation(glm::vec3 cameraPos) {
 		bool visB = culling_chunk_visible(b);
 		if (visA != visB) return visA; // not both visible -> prioritize visible
 
-		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
+		glm::vec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
 							floor(cameraPos.y / CHUNK_SIZE_Y), 
 							floor(cameraPos.z / CHUNK_SIZE_Z));
-		int distA = std::abs(a.x - c.x) + std::abs(a.y - c.y) + std::abs(a.z - c.z);
-		int distB = std::abs(b.x - c.x) + std::abs(b.y - c.y) + std::abs(b.z - c.z);
-		return distA < distB;
+		// manhattan
+		// int distA = std::abs(a.x - c.x) + std::abs(a.y - c.y) + std::abs(a.z - c.z);
+		// int distB = std::abs(b.x - c.x) + std::abs(b.y - c.y) + std::abs(b.z - c.z);
+
+		// euclidean (ohne sqrt)
+		// int distA = glm::distance2(glm::vec3(a), c);
+		// int distB = glm::distance2(glm::vec3(b), c);
+
+		// return distA < distB;
+		
+		int distA = std::abs(a.x - c.x) + std::abs(a.z - c.z);
+		int distB = std::abs(b.x - c.x) + std::abs(b.z - c.z);
+		if (distA != distB) return distA < distB;
+		return std::abs(a.y - c.y) < std::abs(b.y - c.y);
 	});
 
 	int generated = 0;
@@ -348,12 +252,19 @@ void world_process_mesh_generation(glm::vec3 cameraPos) {
 		bool visB = culling_chunk_visible(b->pos);
 		if (visA != visB) return visA; // not both visible -> prioritize visible
 
-		glm::ivec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
+		glm::vec3 c = glm::ivec3(floor(cameraPos.x / CHUNK_SIZE_X), 
 							floor(cameraPos.y / CHUNK_SIZE_Y), 
 							floor(cameraPos.z / CHUNK_SIZE_Z));
-		int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.y - c.y) + std::abs(a->pos.z - c.z);
-		int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.y - c.y) + std::abs(b->pos.z - c.z);
-		return distA < distB;
+		// int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.y - c.y) + std::abs(a->pos.z - c.z);
+		// int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.y - c.y) + std::abs(b->pos.z - c.z);
+
+		// int distA = glm::distance2(glm::vec3(a->pos), c);
+		// int distB = glm::distance2(glm::vec3(b->pos), c);
+
+		int distA = std::abs(a->pos.x - c.x) + std::abs(a->pos.z - c.z);
+		int distB = std::abs(b->pos.x - c.x) + std::abs(b->pos.z - c.z);
+		if (distA != distB) return distA < distB;
+		return std::abs(a->pos.y - c.y) < std::abs(b->pos.y - c.y);
 	});
 
 

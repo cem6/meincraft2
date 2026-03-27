@@ -6,7 +6,7 @@
 constexpr int FRAME_DELAY = (1000 / TARGET_FPS);
 
 // renderer
-#define RENDER_DISTANCE 16 // radius
+#define RENDER_DISTANCE 12 // radius
 #define FRUSTUM_CULLING true
 
 // camera
@@ -22,5 +22,5 @@ constexpr int CHUNK_VOLUME (CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z);
 // world
 #define MAX_BLOCKDATA_GENERATIONS_PER_FRAME 4
 #define MAX_MESH_GENERATIONS_PER_FRAME (2*MAX_BLOCKDATA_GENERATIONS_PER_FRAME) 
-#define MIN_Y (-CHUNK_SIZE_Y * 3)
-
+#define MIN_Y (-CHUNK_SIZE_Y * 1)
+#define SEA_LEVEL 42

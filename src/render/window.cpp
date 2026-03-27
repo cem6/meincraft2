@@ -32,6 +32,8 @@ void window_create() {
 
 	renderer_init();
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	// glEnable(GL_MULTISAMPLE);
 	//
 	// glEnable(GL_CULL_FACE);
@@ -96,7 +98,7 @@ void window_loop() {
 		debug_create_window();
 
 		// render
-		glClearColor(0.2f, 0.5f, 0.9f, 1);
+		glClearColor(0.4f, 0.6f, 1.0f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		renderer_draw_frame();
 
@@ -106,7 +108,8 @@ void window_loop() {
 
 		// wait if finished early
 		frameTime = SDL_GetTicks() - frameStart;
-		debug.frame_ms = frameTime;
+		static int c = 0;
+		if (c++ % 10 == 0) debug.frame_ms = frameTime;
 		if (FRAME_DELAY > frameTime) SDL_Delay(FRAME_DELAY - frameTime);
 	}
 
