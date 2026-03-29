@@ -9,7 +9,8 @@
 
 #include "../world/chunk.h"
 #include "../world/world.h"
-#include "../ui/crosshair.h"
+
+#include "../ui/ui.h"
 
 void renderer_init();
 void renderer_draw_frame();

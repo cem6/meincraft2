@@ -1,21 +1,16 @@
 #include "renderer.h"
-#include "../util/debug.h"
+#include "../ui/debug.h"
 
 GLuint shaderProgram;
 GLint modelLoc, viewLoc, projLoc, texLoc, aimPosLoc, aimNormLoc,
 	camposLoc, lightposLoc, timeLoc,
 	renderDistLoc, waterLevelLoc;
 
-GLuint uiShaderProgram;
-GLint aspectLoc;
-
 void renderer_init() {
 	shaderProgram = shader_create("res/shaders/world.vert", "res/shaders/world.frag");
 	texture_create("res/images/atlas1.png");
 	// texture_create("res/images/test.png");
 	
-	uiShaderProgram = shader_create("res/shaders/ui.vert", "res/shaders/ui.frag");
-
 	modelLoc = glGetUniformLocation(shaderProgram, "model");
 	viewLoc  = glGetUniformLocation(shaderProgram, "view");
 	projLoc  = glGetUniformLocation(shaderProgram, "projection");
@@ -28,10 +23,9 @@ void renderer_init() {
 	renderDistLoc 	= glGetUniformLocation(shaderProgram, "renderDist");
 	waterLevelLoc 	= glGetUniformLocation(shaderProgram, "waterLevel");
 
-	aspectLoc = glGetUniformLocation(uiShaderProgram, "aspect");
-
 	world_init();
-	crosshair_init();
+	ui_init();
+	// text_init();
 
 	glUseProgram(shaderProgram);
 	glUniform1i(texLoc, 0);
@@ -133,23 +127,6 @@ void _draw_radius(glm::vec3 cameraPos) {
 	debug.rendered_chunks = chunks.size();
 }
 
-void _draw_ui() {
-	glDisable(GL_DEPTH_TEST);
-	glUseProgram(uiShaderProgram);
-	glUniform1f(aspectLoc, (float)WINDOW_WIDTH / WINDOW_HEIGHT);
-
-	glEnable(GL_COLOR_LOGIC_OP);
-	glLogicOp(GL_INVERT);
-
-	crosshair_bind_vao();
-	glLineWidth(2.0f);
-	glDrawArrays(GL_LINES, 0, 4);
-	glBindVertexArray(0);
-
-	glDisable(GL_COLOR_LOGIC_OP);
-	glEnable(GL_DEPTH_TEST);
-}
-
 void renderer_draw_frame() {
 	glUseProgram(shaderProgram);
 
@@ -191,5 +168,5 @@ void renderer_draw_frame() {
 	world_process_mesh_generation(camera.pos);
 	_draw_radius(camera.pos);
 
-	_draw_ui();
+	ui_draw();
 }

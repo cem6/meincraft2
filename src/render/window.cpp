@@ -1,6 +1,6 @@
 #include "window.h"
 
-#include "../util/debug.h"
+#include "../ui/debug.h"
 
 SDL_Window* window = nullptr;
 SDL_GLContext context = nullptr;
@@ -41,8 +41,6 @@ void window_create() {
 	// glFrontFace(GL_CCW);
 
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-	debug_init(window, context);
 }
 
 void _destroy() {
@@ -68,8 +66,6 @@ void window_loop() {
 
 		// events
 		while (SDL_PollEvent(&event)) {
-			debug_pass_event(event);
-
 			if (event.type == SDL_EVENT_QUIT) running = false;
 			// keyboard
 			if (event.type == SDL_EVENT_KEY_DOWN) {
@@ -85,6 +81,8 @@ void window_loop() {
 				}
 				// toggle camera mode
 				if (event.key.key == SDLK_C) camera.toggle_view();
+				// toggle debug text visible
+				if (event.key.key == SDLK_TAB) debug.toggle_visible();
 			}
 			// mouse buttons
 			// TODO: get raycast somewhere else
@@ -98,24 +96,18 @@ void window_loop() {
 					if (r.hit) world_remove_block(r.blockPos);
 				}
 			}
-			// only move camera when mouse captured (and not in imgui)
-			if (event.type == SDL_EVENT_MOUSE_MOTION 
-				&& SDL_GetWindowRelativeMouseMode(window)
-				&& !ImGui::GetIO().WantCaptureMouse) {
+			// only move camera when mouse captured 
+			if (event.type == SDL_EVENT_MOUSE_MOTION && SDL_GetWindowRelativeMouseMode(window)) {
 				camera_update_rotation(event.motion.xrel, event.motion.yrel);
 			}
 		}
 
 		camera_update_position(deltaTime);
 
-		debug_create_window();
-
 		// render
 		glClearColor(0.4f, 0.6f, 1.0f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		renderer_draw_frame();
-
-		debug_render();
 
 		SDL_GL_SwapWindow(window);
 

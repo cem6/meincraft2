@@ -1,7 +1,7 @@
 #include "world.h"
 
 #include "noise/FastNoiseLite.h"
-#include "../util/debug.h"
+#include "../ui/debug.h"
 
 #include <chrono>
 std::chrono::steady_clock::time_point startTime;

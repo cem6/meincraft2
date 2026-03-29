@@ -1,6 +1,6 @@
 #include "camera.h"
 
-#include "../util/debug.h"
+#include "../ui/debug.h"
 
 Camera camera;
 
