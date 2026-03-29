@@ -23,4 +23,7 @@ void world_update_load_queue(glm::vec3 cameraPos);
 void world_process_blockdata_generation(glm::vec3 cameraPos);
 void world_process_mesh_generation(glm::vec3 cameraPos);
 
+void world_add_block(glm::ivec3, blocktype);
+void world_remove_block(glm::ivec3);
+
 #endif

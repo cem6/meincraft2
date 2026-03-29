@@ -9,12 +9,15 @@ keybinds
 	c: toggle 2d camera
 
 TODO
-	better light ?
+	camera cleanup -> ? src/entity/ camera, player, physics, ...
+
+	physik
+
+	resizable window
 
 	transparent blocks
-
+	render water when only above neighbor not water
 	noise besser
-	physik
-	bauen
+	better light ?
 
 	threads für chunkgen

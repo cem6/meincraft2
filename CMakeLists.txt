@@ -5,9 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ?
 find_package(SDL3 REQUIRED)
-# find_package(OpenGl REQUIRED)
+find_package(OpenGL REQUIRED)
 
 add_executable(Voxel
 	src/main.cpp
@@ -34,6 +33,9 @@ add_executable(Voxel
 	src/world/world.h
 	src/world/world.cpp
 
+	src/ui/crosshair.h
+	src/ui/crosshair.cpp
+
 	lib/glad/src/glad.c
 
 	lib/imgui/imconfig.h
@@ -57,9 +59,10 @@ target_include_directories(Voxel PRIVATE
 	lib
 	lib/glad/include
 	lib/imgui
+	lib/imgui/backends
 )
 
 target_link_libraries(Voxel PRIVATE
-	SDL3
-	GL
+	SDL3::SDL3
+	OpenGL::GL
 )

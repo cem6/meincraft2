@@ -2,24 +2,47 @@
 #include "../util/debug.h"
 
 GLuint shaderProgram;
-GLint modelLoc, viewLoc, projLoc, texLoc, 
-	camposLoc, lightposLoc, renderDistLoc;
+GLint modelLoc, viewLoc, projLoc, texLoc, aimPosLoc, aimNormLoc,
+	camposLoc, lightposLoc, timeLoc,
+	renderDistLoc, waterLevelLoc;
+
+GLuint uiShaderProgram;
+GLint aspectLoc;
 
 void renderer_init() {
-	// shaderProgram = shader_create("res/shaders/cube.vert", "res/shaders/cube.frag");
-	shaderProgram = shader_create("res/shaders/light.vert", "res/shaders/light.frag");
+	shaderProgram = shader_create("res/shaders/world.vert", "res/shaders/world.frag");
 	texture_create("res/images/atlas1.png");
 	// texture_create("res/images/test.png");
+	
+	uiShaderProgram = shader_create("res/shaders/ui.vert", "res/shaders/ui.frag");
 
 	modelLoc = glGetUniformLocation(shaderProgram, "model");
 	viewLoc  = glGetUniformLocation(shaderProgram, "view");
 	projLoc  = glGetUniformLocation(shaderProgram, "projection");
 	texLoc   = glGetUniformLocation(shaderProgram, "ourTexture");
+	aimPosLoc    	= glGetUniformLocation(shaderProgram, "aimPos");
+	aimNormLoc    	= glGetUniformLocation(shaderProgram, "aimNorm");
 	camposLoc   	= glGetUniformLocation(shaderProgram, "camPos");
 	lightposLoc   	= glGetUniformLocation(shaderProgram, "lightPos");
+	timeLoc   		= glGetUniformLocation(shaderProgram, "time");
 	renderDistLoc 	= glGetUniformLocation(shaderProgram, "renderDist");
+	waterLevelLoc 	= glGetUniformLocation(shaderProgram, "waterLevel");
+
+	aspectLoc = glGetUniformLocation(uiShaderProgram, "aspect");
 
 	world_init();
+	crosshair_init();
+
+	glUseProgram(shaderProgram);
+	glUniform1i(texLoc, 0);
+
+	glUniform1f(renderDistLoc, RENDER_DISTANCE);
+	glUniform1f(waterLevelLoc, WATER_LEVEL);
+}
+
+void renderer_destroy() {
+	world_destroy();
+	glDeleteProgram(shaderProgram);
 }
 
 void _draw_chunk(Chunk *chunk) {
@@ -38,14 +61,15 @@ void _draw_chunk(Chunk *chunk) {
 }
 
 void _draw_chunks(std::vector<Chunk*> &chunks) {
+	// draw transparent after others blocks for transparency to consider others
 	for (auto &c : chunks) {
 		if (c->vertexCount > 0) {
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(
-		c->pos.x * CHUNK_SIZE_X,
-		c->pos.y * CHUNK_SIZE_Y,
-		c->pos.z * CHUNK_SIZE_Z
-	));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(
+				c->pos.x * CHUNK_SIZE_X,
+				c->pos.y * CHUNK_SIZE_Y,
+				c->pos.z * CHUNK_SIZE_Z
+			));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			glBindVertexArray(c->vao);
 			glDrawArrays(GL_TRIANGLES, 0, c->vertexCount);
 		}
@@ -54,12 +78,12 @@ void _draw_chunks(std::vector<Chunk*> &chunks) {
 	glDepthMask(GL_FALSE);
 	for (auto &c : chunks) {
 		if (c->transparentVertexCount > 0) {
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(
-		c->pos.x * CHUNK_SIZE_X,
-		c->pos.y * CHUNK_SIZE_Y,
-		c->pos.z * CHUNK_SIZE_Z
-	));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(
+				c->pos.x * CHUNK_SIZE_X,
+				c->pos.y * CHUNK_SIZE_Y,
+				c->pos.z * CHUNK_SIZE_Z
+			));
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			glBindVertexArray(c->transparentVao);
 			glDrawArrays(GL_TRIANGLES, 0, c->transparentVertexCount);
 		}
@@ -68,7 +92,6 @@ void _draw_chunks(std::vector<Chunk*> &chunks) {
 }
 
 void _draw_radius(glm::vec3 cameraPos) {
-	int rendered_chunks = 0;
 	static std::vector<Chunk*> chunks;
 	chunks.clear();
 
@@ -99,34 +122,52 @@ void _draw_radius(glm::vec3 cameraPos) {
 				glm::ivec3 pos(camX + x, camY + y, camZ + z);
 
 				auto it = world.chunkMap.find(pos);
-				// if (it != world.chunkMap.end() && world_chunk_visible(pos)) {
 				if (it != world.chunkMap.end() && world_chunk_visible(pos) && culling_chunk_visible(pos)) {
-					rendered_chunks++;
-					// _draw_chunk(it->second);
 					chunks.push_back(it->second);
 				}
 			}
 		}
 	}
-	
 	_draw_chunks(chunks);
 
+	debug.rendered_chunks = chunks.size();
+}
 
-	debug.rendered_chunks = rendered_chunks;
+void _draw_ui() {
+	glDisable(GL_DEPTH_TEST);
+	glUseProgram(uiShaderProgram);
+	glUniform1f(aspectLoc, (float)WINDOW_WIDTH / WINDOW_HEIGHT);
+
+	glEnable(GL_COLOR_LOGIC_OP);
+	glLogicOp(GL_INVERT);
+
+	crosshair_bind_vao();
+	glLineWidth(2.0f);
+	glDrawArrays(GL_LINES, 0, 4);
+	glBindVertexArray(0);
+
+	glDisable(GL_COLOR_LOGIC_OP);
+	glEnable(GL_DEPTH_TEST);
 }
 
 void renderer_draw_frame() {
 	glUseProgram(shaderProgram);
 
-	// light
 	glUniform3f(camposLoc, camera.pos.x, camera.pos.y, camera.pos.z);
 	glUniform3f(lightposLoc, 0.0f, 200.0f, 0.0f);
-	glUniform1f(renderDistLoc, RENDER_DISTANCE);
+	// glUniform1f(timeLoc, SDL_GetTicks() / 1000.0f);
 
 	// texture
 	glActiveTexture(GL_TEXTURE0);	
 	glBindTexture(GL_TEXTURE_2D, texture);
-	glUniform1i(texLoc, 0);
+
+	// looking at highlight
+	Raycast r = camera_get_raycast(RAYCAST_DIST);
+	if (r.hit){
+		glUniform3i(aimPosLoc, r.blockPos.x, r.blockPos.y, r.blockPos.z);
+		glUniform3i(aimNormLoc, r.normal.x, r.normal.y, r.normal.z);
+	} 
+	else glUniform3i(aimPosLoc, 0, INT_MIN, 0);
 
 	// camera math
 	// 3d camera, fov: 45.0 -> 70, 59 -> 90, always calculate for culling
@@ -146,13 +187,9 @@ void renderer_draw_frame() {
 	static int frameCnt = 0;
 	if (frameCnt++ % 20 == 0) world_update_load_queue(camera.pos);
 
-	// world_update_chunks(camera.pos); // limited generations per frame
 	world_process_blockdata_generation(camera.pos);
 	world_process_mesh_generation(camera.pos);
 	_draw_radius(camera.pos);
-}
 
-void renderer_destroy() {
-	world_destroy();
-	glDeleteProgram(shaderProgram);
+	_draw_ui();
 }

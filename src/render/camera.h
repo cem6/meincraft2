@@ -2,6 +2,7 @@
 #define CAMERA_H
 
 #include "../util/util.h"
+#include "../world/world.h"
 
 struct Camera {
 	glm::vec3 pos 	= glm::vec3(0.0f, 75.0f, 0.0f);
@@ -20,6 +21,13 @@ struct Camera {
 };
 extern Camera camera;
 
+struct Raycast {
+	bool hit = false;
+	glm::ivec3 blockPos; // block aimed at
+	glm::vec3 normal; // side 
+};
+
+Raycast camera_get_raycast(float);
 void camera_update_rotation(float xoffset, float yoffset);
 void camera_update_position(float deltaTime);
 

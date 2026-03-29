@@ -71,6 +71,7 @@ void window_loop() {
 			debug_pass_event(event);
 
 			if (event.type == SDL_EVENT_QUIT) running = false;
+			// keyboard
 			if (event.type == SDL_EVENT_KEY_DOWN) {
 				if (event.key.key == SDLK_ESCAPE) running = false;
 				// toggle capture mouse
@@ -84,6 +85,18 @@ void window_loop() {
 				}
 				// toggle camera mode
 				if (event.key.key == SDLK_C) camera.toggle_view();
+			}
+			// mouse buttons
+			// TODO: get raycast somewhere else
+			if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+				if (event.button.button == SDL_BUTTON_RIGHT) {
+					Raycast r = camera_get_raycast(RAYCAST_DIST);
+					if (r.hit) world_add_block(r.blockPos + glm::ivec3(r.normal), STONE);
+				}
+				if (event.button.button == SDL_BUTTON_LEFT) {
+					Raycast r = camera_get_raycast(RAYCAST_DIST);
+					if (r.hit) world_remove_block(r.blockPos);
+				}
 			}
 			// only move camera when mouse captured (and not in imgui)
 			if (event.type == SDL_EVENT_MOUSE_MOTION 

@@ -20,23 +20,38 @@ glm::ivec3 neighbors[6] = {
 	{0.0, 0.0, -1.0}
 };
 
+void world_init() {
+	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
+	// _generate_initial_world();
+}
+
+void world_destroy() {
+	for (auto &[_, c] : world.chunkMap) {
+		glDeleteVertexArrays(1, &c->vao);	
+		glDeleteBuffers(1, &c->vbo);
+		delete c;
+	}
+	world.chunkMap.clear();
+	world.dirtyChunks.clear();
+}
+
 float _get_noise_height(float x, float z) {
     float total = 0;
-    float frequency = 0.7f;  // How "stretched" the noise is
-    float amplitude = 1.2f;  // How "tall" the noise is
-    float maxValue = 0;      // Used for normalizing
-    int octaves = 6;         // How many layers of detail
+    float frequency = 0.6f; // stretched
+    float amplitude = 1.5f; // tall
+    int octaves = 6; // layers
+    float maxValue = 0;      
 
     for(int i = 0; i < octaves; i++) {
         total += noise.GetNoise(x * frequency, z * frequency) * amplitude;
         
         maxValue += amplitude;
-        amplitude *= 0.5f;   // Each layer is half as tall (Persistence)
-        frequency *= 2.0f;   // Each layer is twice as detailed (Lacunarity)
+        amplitude *= 0.5f; // layer is half as tall
+        frequency *= 2.0f; // layer is twice as detailed
     }
 
 	if (total > 0) total = total*total;
-	else total = 1.5*total;
+	else total *= 0.8;
 	return (total / maxValue + 1) * CHUNK_SIZE_X + 16;
 }
 
@@ -61,12 +76,12 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 				int gy = yOffset + y;
 
 				// ??????????????????????
-				if (gy > 1.2*SEA_LEVEL && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
+				if (gy > 1.2*WATER_LEVEL && gy <= height) c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
 				// else if (gy < height - 3) 	c->blocks[chunk_pos_to_idx(x, y, z)] = STONE;
-				else if (gy == height && height > SEA_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
-				else if (gy < height && height <= SEA_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
+				else if (gy == height && height > WATER_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = GRASS;
+				else if (gy <= height && height <= WATER_LEVEL + 3) c->blocks[chunk_pos_to_idx(x, y, z)] = SAND;
 				else if (gy < height) c->blocks[chunk_pos_to_idx(x, y, z)] = DIRT;
-				else if (gy == SEA_LEVEL)	c->blocks[chunk_pos_to_idx(x, y, z)] = WATER;
+				else if (gy == WATER_LEVEL)	c->blocks[chunk_pos_to_idx(x, y, z)] = WATER;
 				else {
 					c->solid = false;
 					c->blocks[chunk_pos_to_idx(x, y, z)] = AIR;
@@ -94,22 +109,6 @@ void _generate_initial_world() {
 
 	// create meshes (neighbor blocks have to exist)
 	for (auto &[_, c] : world.chunkMap) chunk_generate_mesh(c);
-}
-
-
-void world_init() {
-	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
-	// _generate_initial_world();
-}
-
-void world_destroy() {
-	for (auto &[_, c] : world.chunkMap) {
-		glDeleteVertexArrays(1, &c->vao);	
-		glDeleteBuffers(1, &c->vbo);
-		delete c;
-	}
-	world.chunkMap.clear();
-	world.dirtyChunks.clear();
 }
 
 blocktype world_get_block(glm::ivec3 globalPos) {
@@ -287,4 +286,53 @@ void world_process_mesh_generation(glm::vec3 cameraPos) {
 		std::cout << "ms: " << duration.count() << ", max dirty chunks: " << max_dc << std::endl;
 		isMeasuring = false;
 	}
+}
+
+void world_add_block(glm::ivec3 pos, blocktype b) {
+
+	glm::ivec3 chunkPos = {
+		(int)floor((float(pos.x) / CHUNK_SIZE_X)),
+		(int)floor((float(pos.y) / CHUNK_SIZE_Y)),
+		(int)floor((float(pos.z) / CHUNK_SIZE_Z))
+	};
+
+	if (!world.chunkMap.count(chunkPos)) return;
+	Chunk *c = world.chunkMap[chunkPos];
+
+	// global -> local pos in chunk
+	int lx = ((pos.x % CHUNK_SIZE_X) + CHUNK_SIZE_X) % CHUNK_SIZE_X;
+	int ly = ((pos.y % CHUNK_SIZE_Y) + CHUNK_SIZE_Y) % CHUNK_SIZE_Y;
+	int lz = ((pos.z % CHUNK_SIZE_Z) + CHUNK_SIZE_Z) % CHUNK_SIZE_Z;
+
+	c->blocks[chunk_pos_to_idx(lx, ly, lz)] = b;
+	if (!c->dirty) {
+		c->dirty = true;
+		world.dirtyChunks.push_back(c);		
+	}
+
+	// mark neighbors dirty
+	auto mark = [&](int dx, int dy, int dz) {
+		glm::ivec3 pos = chunkPos + glm::ivec3(dx, dy, dz);
+		auto it = world.chunkMap.find(pos);
+		if (it != world.chunkMap.end()) {
+			Chunk *nc = it->second;
+			if (!nc->dirty) {
+				nc->dirty = true;
+				world.dirtyChunks.push_back(nc);
+			}
+		}
+	};
+	if (lx == 0) 				mark(-1, 0, 0);
+	if (lx == CHUNK_SIZE_X - 1) mark(1, 0, 0);
+	if (ly == 0) 				mark(0, -1, 0);
+	if (ly == CHUNK_SIZE_Y - 1) mark(0, 1, 0);
+	if (lz == 0) 				mark(0, 0, -1);
+	if (lz == CHUNK_SIZE_Z - 1) mark(0, 0, 1);
+
+	// world_update_load_queue(pos);
+}
+
+void world_remove_block(glm::ivec3 pos) {
+	world_add_block(pos, AIR);
+	world_update_load_queue(pos);
 }

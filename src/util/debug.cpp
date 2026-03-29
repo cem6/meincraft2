@@ -22,6 +22,7 @@ void debug_create_window() {
 	ImGui_ImplSDL3_NewFrame();
 	ImGui::NewFrame();
 
+	ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_Always);
 	ImGui::Begin(" ");
 	ImGui::Text("%d %d %d", debug.x, debug.y, debug.z);
 	ImGui::Text("frame ms: %d", debug.frame_ms);
