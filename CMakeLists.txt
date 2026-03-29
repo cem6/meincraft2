@@ -44,6 +44,7 @@ add_executable(Voxel
 target_include_directories(Voxel PRIVATE
 	src
 	lib
+	lib/glm
 	lib/glad/include
 
 	lib/freetype/include
