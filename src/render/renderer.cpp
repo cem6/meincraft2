@@ -25,7 +25,6 @@ void renderer_init() {
 
 	world_init();
 	ui_init();
-	// text_init();
 
 	glUseProgram(shaderProgram);
 	glUniform1i(texLoc, 0);
@@ -138,13 +137,7 @@ void renderer_draw_frame() {
 	glActiveTexture(GL_TEXTURE0);	
 	glBindTexture(GL_TEXTURE_2D, texture);
 
-	// looking at highlight
-	Raycast r = camera_get_raycast(RAYCAST_DIST);
-	if (r.hit){
-		glUniform3i(aimPosLoc, r.blockPos.x, r.blockPos.y, r.blockPos.z);
-		glUniform3i(aimNormLoc, r.normal.x, r.normal.y, r.normal.z);
-	} 
-	else glUniform3i(aimPosLoc, 0, INT_MIN, 0);
+	player_mark_looking_at(aimPosLoc, aimNormLoc);
 
 	// camera math
 	// 3d camera, fov: 45.0 -> 70, 59 -> 90, always calculate for culling

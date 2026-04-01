@@ -38,6 +38,8 @@ glm::vec2 _get_atlas_coords(blocktype type, face fi) {
 			return glm::vec2(2, 17);
 		case SAND: 	return glm::vec2(4, 17);
 		case WATER: return glm::vec2(5, 17);
+		case WOODPLANK: return glm::vec2(6, 17);
+		case BRICK: return glm::vec2(7, 17);
 
 		default: return glm::vec2(15, 0);
 	};

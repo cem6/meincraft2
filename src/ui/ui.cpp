@@ -32,6 +32,7 @@ void _quad_init() {
 
 void ui_draw_quad(float x, float y, float width, float height, glm::vec4 color) {
 	glUseProgram(uiShaderProgram);
+	glDisable(GL_DEPTH_TEST);
 
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(x, y, 0.0f));
@@ -43,6 +44,7 @@ void ui_draw_quad(float x, float y, float width, float height, glm::vec4 color) 
 	glBindVertexArray(qvao);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
+	glEnable(GL_DEPTH_TEST);
 }
 
 void ui_init() {

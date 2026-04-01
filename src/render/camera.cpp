@@ -4,77 +4,6 @@
 
 Camera camera;
 
-// Raycast camera_get_raycast(glm::vec3 origin, glm::vec3 dir, float maxDist) {
-Raycast camera_get_raycast(float maxDist) {
-	Raycast raycast;
-
-	// current block
-	// ! da vertex coords -0.5 bis 0.5 muss auch origin
-	glm::vec3 origin = camera.pos + (camera.front * 0.1f) + 0.5f;
-	glm::ivec3 pos = glm::floor(origin);
-	glm::vec3 dir = camera.front;
-
-	// direction of each axis
-	glm::ivec3 step;
-	step.x = (dir.x > 0) ? 1 : -1;
-	step.y = (dir.y > 0) ? 1 : -1;
-	step.z = (dir.z > 0) ? 1 : -1;
-
-	// dist along ray to first solid block
-	glm::vec3 tMax;
-    tMax.x = (floor(origin.x + (step.x > 0 ? 1 : 0)) - origin.x) / dir.x;
-    tMax.y = (floor(origin.y + (step.y > 0 ? 1 : 0)) - origin.y) / dir.y;
-    tMax.z = (floor(origin.z + (step.z > 0 ? 1 : 0)) - origin.z) / dir.z;
-
-	// dist along ray to next (1) block
-	glm::vec3 tDelta = glm::abs(1.0f / dir);
-
-	float dist = 0;
-	while (dist < maxDist) {
-		// check hit solid block
-		blocktype b = world_get_block(pos);
-		if (b != AIR && b != WATER) {
-			raycast.hit = true;
-			raycast.blockPos = pos;
-			return raycast;
-		}
-
-        // check closest block in each direction -> go there
-		// ! so insgesamt weniger vergleiche
-		if (tMax.x < tMax.y) {
-			if (tMax.x < tMax.z) {
-                pos.x += step.x;
-                dist = tMax.x;
-                tMax.x += tDelta.x;
-                raycast.normal = glm::vec3(-step.x, 0, 0);
-            } 
-			else {
-                pos.z += step.z;
-                dist = tMax.z;
-                tMax.z += tDelta.z;
-                raycast.normal = glm::vec3(0, 0, -step.z);
-            }
-        } 
-		else {
-			if (tMax.y < tMax.z) {
-                pos.y += step.y;
-                dist = tMax.y;
-                tMax.y += tDelta.y;
-                raycast.normal = glm::vec3(0, -step.y, 0);
-            } 
-			else {
-                pos.z += step.z;
-                dist = tMax.z;
-                tMax.z += tDelta.z;
-                raycast.normal = glm::vec3(0, 0, -step.z);
-            }
-        }
-    }
-
-	// std::cout << raycast.normal.x << ' ' << raycast.normal.y << ' ' << raycast.normal.z << std::endl;
-    return raycast;
-}
-
 void camera_update_rotation(float xoffset, float yoffset) {
 	if (camera.view_2d) return;
 
@@ -92,7 +21,66 @@ void camera_update_rotation(float xoffset, float yoffset) {
 	camera.front = glm::normalize(dir);
 }
 
-void camera_update_position(float deltaTime) {
+bool _check_collision(glm::vec3 pos) {
+	float w = 0.4f, h = 1.2f;
+	float eh = h - 0.1f;
+
+	for (float x = -w; x <= w; x += 2*w) {
+		for (float z = -w; z <= w; z += 2*w) {
+			for (float y = h-eh; y <= h; y += eh/2) {
+				glm::ivec3 blockPos = glm::floor(pos + glm::vec3(x, y - eh, z));
+				blocktype b = world_get_block(blockPos);
+				if (b != AIR && b != WATER) return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void camera_move_physics(float deltaTime) {
+	float speed = MOVESPEED/2 * deltaTime;
+	const bool *state = SDL_GetKeyboardState(NULL);
+	if (state[SDL_SCANCODE_LSHIFT]) speed *= 2;
+
+	glm::vec3 dir(0.0f);
+
+	glm::vec3 forward = glm::normalize(glm::vec3(camera.front.x, 0.0f, camera.front.z));
+	glm::vec3 right = glm::normalize(glm::cross(forward, camera.up));
+
+	if (state[SDL_SCANCODE_W]) 	dir += forward;
+	if (state[SDL_SCANCODE_S]) 	dir -= forward;
+	if (state[SDL_SCANCODE_A]) 	dir -= right;
+	if (state[SDL_SCANCODE_D]) 	dir += right;
+	// if (state[SDL_SCANCODE_W]) 	dir += camera.front;
+	// if (state[SDL_SCANCODE_S]) 	dir -= camera.front;
+	// if (state[SDL_SCANCODE_A]) 	dir -= glm::normalize(glm::cross(camera.front, camera.up));
+	// if (state[SDL_SCANCODE_D]) 	dir += glm::normalize(glm::cross(camera.front, camera.up));
+
+	// prevent faster diagonal movement
+	if (glm::length(dir) > 0.0f) dir = glm::normalize(dir) * speed;
+
+	glm::vec3 np = camera.pos;
+	np.x += dir.x;
+	if (!_check_collision(np)) camera.pos.x = np.x;
+
+	np = camera.pos;
+	np.z += dir.z;
+	if (!_check_collision(np)) camera.pos.z = np.z;
+
+	if (state[SDL_SCANCODE_SPACE]) dir.y += speed;
+	else dir.y -= speed * 2;
+
+	np = camera.pos;
+	np.y += dir.y;
+	if (!_check_collision(np)) camera.pos.y = np.y;
+
+	debug.x = camera.pos.x;
+	debug.y = camera.pos.y;
+	debug.z = camera.pos.z;
+}
+
+void camera_move_fly(float deltaTime) {
 	float speed = MOVESPEED * deltaTime;
 	const bool *state = SDL_GetKeyboardState(NULL);
 
@@ -109,5 +97,10 @@ void camera_update_position(float deltaTime) {
 	debug.x = camera.pos.x;
 	debug.y = camera.pos.y;
 	debug.z = camera.pos.z;
+}
+
+void camera_update_position(float deltaTime) {
+	if (camera.physics_enabled) camera_move_physics(deltaTime);
+	else camera_move_fly(deltaTime);
 }
 

@@ -11,6 +11,7 @@ struct Camera {
 	float yaw = 0.0f; // x
 	float pitch = 0.0f; // y
 	bool view_2d = false; // 2d
+	bool physics_enabled = false;
 	
 	// kann hier drin bleiben ist egal
 	void toggle_view() {
@@ -18,16 +19,12 @@ struct Camera {
 		pitch = 0;
 		view_2d = !view_2d;
 	}
+	void toggle_physics() {
+		physics_enabled = !physics_enabled;
+	}
 };
 extern Camera camera;
 
-struct Raycast {
-	bool hit = false;
-	glm::ivec3 blockPos; // block aimed at
-	glm::vec3 normal; // side 
-};
-
-Raycast camera_get_raycast(float);
 void camera_update_rotation(float xoffset, float yoffset);
 void camera_update_position(float deltaTime);
 

@@ -11,6 +11,7 @@ extern struct Debug {
 	int rendered_chunks;
 	int generated_chunks;
 	int dirty_chunks;
+	std::string selected_block;
 
 	bool visible = true;
 	void toggle_visible() {

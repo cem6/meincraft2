@@ -10,7 +10,20 @@ enum blocktype {
 	GRASS,
 	SAND,
 	WATER,
+	WOODPLANK,
+	BRICK,
 };
+const std::string blocktype_to_str[] = {
+	"AIR",
+	"STONE",
+	"DIRT",
+	"GRASS",
+	"SAND",
+	"WATER",
+	"WOODPLANK",
+	"BRICK",
+};
+const std::vector<blocktype> placableBlocks = { STONE, DIRT, GRASS, SAND, WOODPLANK, BRICK };
 
 enum face {
 	TOP,

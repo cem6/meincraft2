@@ -1,25 +1,30 @@
 dependencies
 	SDL3, 
 	sonst alles mit drin
+clone with submodules: git clone --recursive <url>
 
 keybinds
-	wasd, space, ctrl: move
-	b: toggle capture mouse	
-	e: togggle render mode line
-	c: toggle 2d camera
-	tab: toggle debug visible
+	wasd, space, ctrl, shift: move
+	esc: quit
+	b: capture mouse	
+	e: render mode line
+	c: 2d camera
+	f: player physics
+	tab: debug text visible
+	mousewheel: change selected block
 
 TODO
-	camera cleanup -> ? src/entity/ camera, player, physics, ...
+	physik: better collision, jump
 	ui cleanup
-
-	physik
 
 	resizable window
 
 	transparent blocks
 	render water when only above neighbor not water
+
 	noise besser
 	better light ?
+
+	texture array -> mipmap, multisample
 
 	threads für chunkgen

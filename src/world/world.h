@@ -14,6 +14,12 @@ struct World {
 };
 extern World world;
 
+struct Raycast {
+	bool hit = false;
+	glm::ivec3 blockPos; // block aimed at
+	glm::vec3 normal; // side 
+};
+
 void world_init();
 void world_destroy();
 blocktype world_get_block(glm::ivec3);
@@ -25,5 +31,6 @@ void world_process_mesh_generation(glm::vec3 cameraPos);
 
 void world_add_block(glm::ivec3, blocktype);
 void world_remove_block(glm::ivec3);
+Raycast world_get_raycast(glm::vec3 camPos, glm::vec3 camDir, float maxDist);
 
 #endif

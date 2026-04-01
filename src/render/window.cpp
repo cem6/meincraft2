@@ -81,20 +81,20 @@ void window_loop() {
 				}
 				// toggle camera mode
 				if (event.key.key == SDLK_C) camera.toggle_view();
+				// toggle player physics
+				if (event.key.key == SDLK_F) camera.toggle_physics();
 				// toggle debug text visible
 				if (event.key.key == SDLK_TAB) debug.toggle_visible();
 			}
 			// mouse buttons
 			// TODO: get raycast somewhere else
 			if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-				if (event.button.button == SDL_BUTTON_RIGHT) {
-					Raycast r = camera_get_raycast(RAYCAST_DIST);
-					if (r.hit) world_add_block(r.blockPos + glm::ivec3(r.normal), STONE);
-				}
-				if (event.button.button == SDL_BUTTON_LEFT) {
-					Raycast r = camera_get_raycast(RAYCAST_DIST);
-					if (r.hit) world_remove_block(r.blockPos);
-				}
+				if (event.button.button == SDL_BUTTON_RIGHT) player_try_place_block();
+				if (event.button.button == SDL_BUTTON_LEFT) player_try_break_block();
+			}
+			if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+				if (event.wheel.y > 0) player_next_block();
+				if (event.wheel.y < 0) player_prev_block();
 			}
 			// only move camera when mouse captured 
 			if (event.type == SDL_EVENT_MOUSE_MOTION && SDL_GetWindowRelativeMouseMode(window)) {
@@ -114,7 +114,7 @@ void window_loop() {
 		// wait if finished early
 		frameTime = SDL_GetTicks() - frameStart;
 		static int c = 0;
-		if (c++ % 10 == 0) debug.frame_ms = frameTime;
+		if (c++ % 5 == 0) debug.frame_ms = frameTime;
 		if (FRAME_DELAY > frameTime) SDL_Delay(FRAME_DELAY - frameTime);
 	}
 

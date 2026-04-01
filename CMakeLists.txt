@@ -30,6 +30,8 @@ add_executable(Voxel
 	src/world/chunk.cpp
 	src/world/world.h
 	src/world/world.cpp
+	src/world/player.h
+	src/world/player.cpp
 
 	src/ui/ui.h
 	src/ui/ui.cpp

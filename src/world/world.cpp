@@ -3,6 +3,8 @@
 #include "noise/FastNoiseLite.h"
 #include "../ui/debug.h"
 
+#include "player.h"
+
 #include <chrono>
 std::chrono::steady_clock::time_point startTime;
 bool isMeasuring = false;
@@ -20,20 +22,6 @@ glm::ivec3 neighbors[6] = {
 	{0.0, 0.0, -1.0}
 };
 
-void world_init() {
-	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
-	// _generate_initial_world();
-}
-
-void world_destroy() {
-	for (auto &[_, c] : world.chunkMap) {
-		glDeleteVertexArrays(1, &c->vao);	
-		glDeleteBuffers(1, &c->vbo);
-		delete c;
-	}
-	world.chunkMap.clear();
-	world.dirtyChunks.clear();
-}
 
 float _get_noise_height(float x, float z) {
     float total = 0;
@@ -95,11 +83,11 @@ Chunk* _generate_blockdata(glm::ivec3 pos) {
 	return world.chunkMap[pos] = c;
 }
 
-void _generate_initial_world() {
+void _generate_initial_world(int s) {
 	// create all block data
-	for (int cy = 0; cy < RENDER_DISTANCE/4; cy++) {
-		for (int cx = -RENDER_DISTANCE/2; cx < RENDER_DISTANCE/2; cx++) {
-			for (int cz = -RENDER_DISTANCE/2; cz < RENDER_DISTANCE/2; cz++) {
+	for (int cy = 0; cy < s; cy++) {
+		for (int cx = -s; cx < s; cx++) {
+			for (int cz = -s; cz < s; cz++) {
 				Chunk *c = new Chunk();
 				chunk_init(c, glm::ivec3(cx, cy, cz));
 				_generate_blockdata(glm::ivec3(cx, cy, cz));
@@ -109,6 +97,22 @@ void _generate_initial_world() {
 
 	// create meshes (neighbor blocks have to exist)
 	for (auto &[_, c] : world.chunkMap) chunk_generate_mesh(c);
+}
+
+void world_init() {
+	noise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2S);
+	_generate_initial_world(1);
+	player_init();
+}
+
+void world_destroy() {
+	for (auto &[_, c] : world.chunkMap) {
+		glDeleteVertexArrays(1, &c->vao);	
+		glDeleteBuffers(1, &c->vbo);
+		delete c;
+	}
+	world.chunkMap.clear();
+	world.dirtyChunks.clear();
 }
 
 blocktype world_get_block(glm::ivec3 globalPos) {
@@ -335,4 +339,77 @@ void world_add_block(glm::ivec3 pos, blocktype b) {
 void world_remove_block(glm::ivec3 pos) {
 	world_add_block(pos, AIR);
 	world_update_load_queue(pos);
+}
+
+Raycast world_get_raycast(glm::vec3 camPos, glm::vec3 camDir, float maxDist) {
+	Raycast raycast;
+
+	// current block
+	// ! da vertex coords -0.5 bis 0.5 muss auch origin
+	// glm::vec3 origin = camera.pos + (camera.front * 0.1f) + 0.5f;
+	// glm::ivec3 pos = glm::floor(origin);
+	// glm::vec3 dir = camera.front;
+	glm::vec3 origin = camPos + (camDir * 0.1f) + 0.5f;
+	glm::ivec3 pos = glm::floor(origin);
+	glm::vec3 dir = camDir;
+
+	// direction of each axis
+	glm::ivec3 step;
+	step.x = (dir.x > 0) ? 1 : -1;
+	step.y = (dir.y > 0) ? 1 : -1;
+	step.z = (dir.z > 0) ? 1 : -1;
+
+	// dist along ray to first solid block
+	glm::vec3 tMax;
+    tMax.x = (floor(origin.x + (step.x > 0 ? 1 : 0)) - origin.x) / dir.x;
+    tMax.y = (floor(origin.y + (step.y > 0 ? 1 : 0)) - origin.y) / dir.y;
+    tMax.z = (floor(origin.z + (step.z > 0 ? 1 : 0)) - origin.z) / dir.z;
+
+	// dist along ray to next (1) block
+	glm::vec3 tDelta = glm::abs(1.0f / dir);
+
+	float dist = 0;
+	while (dist < maxDist) {
+		// check hit solid block
+		blocktype b = world_get_block(pos);
+		if (b != AIR && b != WATER) {
+			raycast.hit = true;
+			raycast.blockPos = pos;
+			return raycast;
+		}
+
+        // check closest block in each direction -> go there
+		// ! so insgesamt weniger vergleiche
+		if (tMax.x < tMax.y) {
+			if (tMax.x < tMax.z) {
+                pos.x += step.x;
+                dist = tMax.x;
+                tMax.x += tDelta.x;
+                raycast.normal = glm::vec3(-step.x, 0, 0);
+            } 
+			else {
+                pos.z += step.z;
+                dist = tMax.z;
+                tMax.z += tDelta.z;
+                raycast.normal = glm::vec3(0, 0, -step.z);
+            }
+        } 
+		else {
+			if (tMax.y < tMax.z) {
+                pos.y += step.y;
+                dist = tMax.y;
+                tMax.y += tDelta.y;
+                raycast.normal = glm::vec3(0, -step.y, 0);
+            } 
+			else {
+                pos.z += step.z;
+                dist = tMax.z;
+                tMax.z += tDelta.z;
+                raycast.normal = glm::vec3(0, 0, -step.z);
+            }
+        }
+    }
+
+	// std::cout << raycast.normal.x << ' ' << raycast.normal.y << ' ' << raycast.normal.z << std::endl;
+    return raycast;
 }
