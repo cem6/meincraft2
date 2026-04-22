@@ -2,7 +2,7 @@
 #define WINDOW_WIDTH 1200
 #define WINDOW_HEIGHT 800
 
-#define TARGET_FPS 60
+#define TARGET_FPS 30
 constexpr int FRAME_DELAY = (1000 / TARGET_FPS);
 
 // renderer
